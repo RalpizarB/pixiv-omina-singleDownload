@@ -25,7 +25,7 @@ class DownloadManager extends EventEmitter {
      */
     this.attachedListenersDownloaders = new Map();
 
-    this.maxDownloading = 2;
+    this.maxDownloading = 1;
   }
 
   static instance = null;
