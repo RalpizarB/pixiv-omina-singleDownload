@@ -11,16 +11,16 @@ import {
 class DownloadAdapter {
   static matchMaps = [
     {
+      provider: PixivBookmarkUrlProvider,
+      patterns: [
+        /^https?:\/{2}www\.pixiv\.net\/(?:[a-z]+\/)?users\/(?<userId>\d+)\/bookmarks\/artworks(?:\?.*)?$/i
+      ]
+    },
+    {
       provider: PixivUserProvider,
       patterns: [
         /^https?:\/{2}www\.pixiv\.net\/member(?:_illust)?\.php\?id=(?<id>\d+)(?:&.*)?$/i,
         /^https?:\/{2}www\.pixiv\.net\/(?:[a-z]+\/)?users\/(?<id>\d+)(?:\?.*)?/i
-      ]
-    },
-    {
-      provider: PixivBookmarkUrlProvider,
-      patterns: [
-        /^https?:\/{2}www\.pixiv\.net\/(?:[a-z]+\/)?users\/(?<userId>\d+)\/bookmarks\/artworks(?:\?.*)?$/i
       ]
     },
     {

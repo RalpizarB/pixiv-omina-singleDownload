@@ -103,7 +103,7 @@ class BookmarkUrlDownloader extends WorkDownloader {
         });
 
         response.on('aborted', () => {
-          reject(Error('Response has been interrupted'));
+          reject(new Error('Response has been interrupted'));
         });
       });
 
@@ -112,7 +112,7 @@ class BookmarkUrlDownloader extends WorkDownloader {
       });
 
       this.request.on('abort', () => {
-        reject(Error('Request has been interrupted'));
+        reject(new Error('Request has been interrupted'));
       });
 
       this.request.on('end', () => this.request = null);
