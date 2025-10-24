@@ -198,7 +198,7 @@ class DownloadManager extends EventEmitter {
     }
     
     // Fallback: check if it's already started and has a total property
-    if (workDownloader.toJSON) {
+    if (typeof workDownloader.toJSON === 'function') {
       const data = workDownloader.toJSON();
       if (data.total !== undefined && data.total > 1) {
         return true;
@@ -208,7 +208,11 @@ class DownloadManager extends EventEmitter {
     return false;
   }
 
-  reachMaxDownloading() {
+  /**
+   * Count currently downloading/processing downloads by type
+   * @returns {{multiImage: number, singleImage: number}}
+   */
+  countActiveDownloads() {
     let multiImageDownloadingCount = 0;
     let singleImageDownloadingCount = 0;
 
@@ -222,9 +226,18 @@ class DownloadManager extends EventEmitter {
       }
     });
 
+    return {
+      multiImage: multiImageDownloadingCount,
+      singleImage: singleImageDownloadingCount
+    };
+  }
+
+  reachMaxDownloading() {
+    const counts = this.countActiveDownloads();
+    
     // Return true if either limit is reached
-    return multiImageDownloadingCount >= this.maxMultiImageDownloading ||
-           singleImageDownloadingCount >= this.maxSingleImageDownloading;
+    return counts.multiImage >= this.maxMultiImageDownloading ||
+           counts.singleImage >= this.maxSingleImageDownloading;
   }
 
   /**
@@ -362,10 +375,11 @@ class DownloadManager extends EventEmitter {
    * @returns {boolean}
    */
   canStartSpecificDownload(workDownloader) {
+    const isMultiImage = this.isMultiImageDownload(workDownloader);
+    
+    // Count downloads excluding the one we're trying to start
     let multiImageDownloadingCount = 0;
     let singleImageDownloadingCount = 0;
-    
-    const isMultiImage = this.isMultiImageDownload(workDownloader);
 
     this.workDownloaderPool.forEach(wd => {
       if ((wd.isDownloading() || wd.isProcessing()) && wd.id !== workDownloader.id) {
