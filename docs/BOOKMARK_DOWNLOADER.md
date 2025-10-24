@@ -1,6 +1,8 @@
 # Bookmark Downloader Feature
 
-## Status: NOT WORKING (Requires Update)
+## Status: FIXED ✅
+
+The bookmark downloader feature has been updated to work with Pixiv's modern API (as of October 2025).
 
 ## Location in Code
 
@@ -24,100 +26,121 @@ The bookmark downloader feature is implemented in the following files:
   - `src/main/modules/Downloader/WorkDownloader/Pixiv/BookmarkDownloader.js`
   - `src/main/modules/Downloader/WorkDownloader/Pixiv/BookmarkPageDownloader.js`
 
-## Why It Doesn't Work
+## What Was Fixed
 
-The bookmark downloader was designed to work with Pixiv's old website structure that used:
-- URL format: `https://www.pixiv.net/bookmark.php?rest={rest}&type=illust_all&p={page}`
-- HTML parsing with CSS selectors: `.display_editable_works .image-item`
+The bookmark downloader was originally designed to work with Pixiv's old website structure:
+- **Old URL format**: `https://www.pixiv.net/bookmark.php?rest={rest}&type=illust_all&p={page}`
+- **Old method**: HTML parsing with CSS selectors (`.display_editable_works .image-item`)
 
-**The Problem**: Pixiv has modernized their website and no longer uses this old HTML structure. The current implementation tries to parse HTML elements that don't exist in the modern Pixiv website, causing the feature to fail silently.
+**The Problem**: Pixiv modernized their website and deprecated the old HTML structure. The old implementation tried to parse HTML elements that no longer existed.
 
-### Specific Issues:
+### Changes Implemented:
 
-1. **Old URL Format** (BookmarkProvider.js, line 17-18):
+1. **Updated to Modern API Endpoint**:
    ```javascript
+   // NEW: Using modern AJAX API
    static getBookmarkUrl({ rest = 'show', page = 1}) {
-     return `https://www.pixiv.net/bookmark.php?rest=${rest}&type=illust_all` + ...
+     const limit = 48;
+     const offset = (page - 1) * limit;
+     return `https://www.pixiv.net/ajax/user/self/illusts/bookmarks?tag=&offset=${offset}&limit=${limit}&rest=${rest}&lang=en`;
    }
    ```
-   This URL format is deprecated.
 
-2. **HTML Parsing** (BookmarkPageDownloader.js, lines 69-72):
+2. **Updated to JSON Parsing** (BookmarkPageDownloader.js):
    ```javascript
+   // NEW: Parse JSON response instead of HTML
    getItems(content) {
-     let dom = parse(content);
-     return dom.querySelectorAll('.display_editable_works .image-item');
+     try {
+       const data = JSON.parse(content);
+       if (data && !data.error && data.body && data.body.works) {
+         return data.body.works;
+       }
+     } catch (error) {
+       debug.log('Error parsing bookmark response:', error);
+     }
+     return null;
    }
    ```
-   These CSS selectors no longer exist in the modern Pixiv website.
 
-## How to Fix
+3. **Key Improvements**:
+   - Uses `/ajax/user/self/illusts/bookmarks` endpoint (no user ID required)
+   - Parses JSON responses instead of HTML
+   - Implements offset-based pagination (48 items per page)
+   - More reliable and consistent with other downloaders in the codebase
 
-To fix this feature, the implementation needs to be updated to use Pixiv's modern AJAX API, similar to how other features in the codebase already work:
+## How to Use the Bookmark Downloader
 
-### Required Changes:
+1. **Login to Pixiv** through the application (required for bookmark access)
+2. **Open Add Download dialog** (click the "+" button or use the menu)
+3. **Switch to Bookmark tab**
+4. **Select bookmark type**:
+   - **Public** (rest='show'): Your public bookmarks
+   - **Private** (rest='hide'): Your private bookmarks
+5. **Choose download mode**:
+   - **All**: Downloads all bookmarks (automatically fetches all pages)
+   - **Pages**: Downloads specific page ranges (e.g., "1" or "1-3" or "1-3,5-10")
+6. **Select save location**
+7. **Click Add** to start downloading
 
-1. **Update URL Builder** (`src/utils/UrlBuilder.js`):
-   - Add a method to generate the new bookmark API endpoint
-   - The modern Pixiv API uses endpoints like: `/ajax/user/{userId}/illusts/bookmarks`
-   - Parameters would include: `tag`, `offset`, `limit`, `rest` (show/hide for public/private)
+The downloader will:
+- Fetch your bookmarked artworks using the modern API
+- Create individual download tasks for each artwork
+- Handle pagination automatically (48 artworks per page)
+- Skip artworks that have already been downloaded (if skip feature is enabled)
 
-2. **Update BookmarkPageDownloader**:
-   - Replace HTML parsing with JSON API response parsing
-   - The API returns JSON with a structure like:
-     ```json
-     {
-       "error": false,
-       "body": {
-         "works": [
-           { "id": "123456", ... },
-           ...
-         ],
-         "total": 1234
-       }
-     }
-     ```
+## API Details
 
-3. **Add User ID Retrieval**:
-   - Need to determine the current logged-in user's ID
-   - Can be obtained from `/ajax/user/{userId}/profile/top` or similar endpoint
-   - Or extracted from cookies/session data
-
-4. **Update BookmarkProvider**:
-   - Use pagination based on offset/limit instead of page numbers
-   - Modern API typically uses offset-based pagination
-
-### Example Modern API Endpoint:
+### Modern Endpoint Structure:
 ```
-https://www.pixiv.net/ajax/user/{userId}/illusts/bookmarks?tag=&offset=0&limit=48&rest=show
+https://www.pixiv.net/ajax/user/self/illusts/bookmarks
 ```
 
-Where:
-- `{userId}`: The current user's ID
-- `tag`: Filter by tag (empty for all)
-- `offset`: Starting position for pagination
-- `limit`: Number of items per request (typically 48)
+### Query Parameters:
+- `tag`: Filter by tag (empty string for all)
+- `offset`: Starting position (0-based, calculated from page number)
+- `limit`: Items per request (48)
 - `rest`: "show" for public, "hide" for private bookmarks
+- `lang`: Language code (e.g., "en")
 
-## Compatibility Note
+### Response Format:
+```json
+{
+  "error": false,
+  "message": "",
+  "body": {
+    "works": [
+      {
+        "id": "123456789",
+        "title": "Artwork Title",
+        "illustType": 0,
+        ...
+      }
+    ],
+    "total": 1234
+  }
+}
+```
 
-The rest of the codebase already uses the modern AJAX API pattern (see `GeneralArtworkDownloader.js`, `UserDownloader.js`, etc.), so the bookmark downloader is the only feature still using the old HTML parsing approach.
+## Testing
 
-## Testing After Fix
-
-After implementing the fix:
+To verify the bookmark downloader works:
 1. Login to Pixiv through the application
-2. Open Add Download dialog
-3. Switch to Bookmark tab
-4. Select bookmark type (Public/Private)
-5. Choose download mode (All or specific pages)
-6. Click Add
-7. Verify that bookmarked artworks are properly downloaded
+2. Make sure you have some bookmarked artworks in your Pixiv account
+3. Open Add Download dialog and switch to Bookmark tab
+4. Try downloading your public bookmarks (mode: "All")
+5. Verify that bookmarked artworks are properly queued for download
+6. Check that the artworks download successfully
 
-## Alternative: Remove Feature
+## Troubleshooting
 
-If updating to the new API is too complex, consider:
-- Removing the Bookmark tab from the UI
-- Removing all bookmark-related code
-- Update documentation to indicate this feature is not supported
-- Suggest users use the URL-based download for individual artworks instead
+**Issue**: Bookmark download fails immediately
+- **Solution**: Make sure you're logged into Pixiv through the application
+
+**Issue**: No bookmarks found
+- **Solution**: Verify you have bookmarks in your Pixiv account at https://www.pixiv.net/bookmark.php
+
+**Issue**: Only some bookmarks download
+- **Solution**: This is expected if "skip downloaded works" is enabled in settings
+
+**Issue**: Download stops after first page
+- **Solution**: Check the application logs for errors. The API might be rate-limited or require authentication refresh.
