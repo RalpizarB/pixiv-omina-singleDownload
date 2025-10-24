@@ -20,7 +20,9 @@ Test on Window 10(1903). In theory, it can run on Mac and Linux if you can compi
 * Easy UI
 * Generate gif for ugoira work automatically and pack frame information to zip file
 * Download user works (input the user profile url to the download dialog)
-* **Download bookmarks (public and private)** - Fixed to work with modern Pixiv API
+* **Download bookmarks** - Now supports both methods:
+  * **Own bookmarks**: Use the Bookmark tab to download your public/private bookmarks
+  * **User bookmarks**: Paste any user's bookmark URL (e.g., `https://www.pixiv.net/en/users/123456/bookmarks/artworks`) to download their public bookmarks
 * Auto rename using the rename settings
 * Restore downloads after application restart
 * Skip downloaded works, so it can download works incrementally
