@@ -51,8 +51,14 @@ class UrlBuilder {
     return `https://www.pixiv.net/ajax/user/${id}/profile/all`;
   }
 
+  /**
+   * Get bookmark URL using modern Pixiv API
+   * @param {Object} params
+   * @param {string} params.rest - 'show' for public, 'hide' for private bookmarks
+   * @returns {string}
+   */
   static getBookmarkUrl({ rest }) {
-    return `https://www.pixiv.net/bookmark.php?rest=${rest}&type=illust_all`;
+    return `https://www.pixiv.net/ajax/user/self/illusts/bookmarks?tag=&offset=0&limit=48&rest=${rest}&lang=en`;
   }
 }
 
