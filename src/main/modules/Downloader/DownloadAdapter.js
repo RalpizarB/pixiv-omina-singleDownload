@@ -4,7 +4,8 @@ import {
   PixivGeneralArtworkProvider,
   PixivNovelProvider,
   PixivNovelSeriesProvider,
-  PixivUserProvider
+  PixivUserProvider,
+  PixivBookmarkUrlProvider
 } from './Providers';
 
 class DownloadAdapter {
@@ -14,6 +15,12 @@ class DownloadAdapter {
       patterns: [
         /^https?:\/{2}www\.pixiv\.net\/member(?:_illust)?\.php\?id=(?<id>\d+)(?:&.*)?$/i,
         /^https?:\/{2}www\.pixiv\.net\/(?:[a-z]+\/)?users\/(?<id>\d+)(?:\?.*)?/i
+      ]
+    },
+    {
+      provider: PixivBookmarkUrlProvider,
+      patterns: [
+        /^https?:\/{2}www\.pixiv\.net\/(?:[a-z]+\/)?users\/(?<userId>\d+)\/bookmarks\/artworks(?:\?.*)?$/i
       ]
     },
     {
