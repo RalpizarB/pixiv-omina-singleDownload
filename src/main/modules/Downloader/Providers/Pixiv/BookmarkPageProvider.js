@@ -15,11 +15,14 @@ class BookmarkPageProvider extends BaseProvider {
   }
 
   /**
-   * Get bookmark url
+   * Get bookmark url using modern Pixiv API
    * @returns {string}
    */
   static getBookmarkUrl({ rest, page }) {
-    return `https://www.pixiv.net/bookmark.php?rest=${rest}&type=illust_all` + (page > 1 ? `&p=${page}` : '');
+    // Calculate offset based on page number (48 items per page)
+    const limit = 48;
+    const offset = (page - 1) * limit;
+    return `https://www.pixiv.net/ajax/user/self/illusts/bookmarks?tag=&offset=${offset}&limit=${limit}&rest=${rest}&lang=en`;
   }
 
   /**

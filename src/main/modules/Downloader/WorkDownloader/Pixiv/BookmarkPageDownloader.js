@@ -1,4 +1,3 @@
-import { parse } from 'node-html-parser';
 import { debug } from '@/global';
 import WorkDownloader from '@/modules/Downloader/WorkDownloader';
 import Request from '@/modules/Request';
@@ -50,11 +49,14 @@ class BookmarkDownloader extends WorkDownloader {
   }
 
   /**
-   * Get bookmark url
+   * Get bookmark url using modern Pixiv API
    * @returns {string}
    */
   getBookmarkUrl() {
-    return `https://www.pixiv.net/bookmark.php?rest=${this.options.rest}&type=illust_all` + (this.options.page > 1 ? `&p=${this.options.page}` : '');
+    // Calculate offset based on page number (48 items per page)
+    const limit = 48;
+    const offset = (this.options.page - 1) * limit;
+    return `https://www.pixiv.net/ajax/user/self/illusts/bookmarks?tag=&offset=${offset}&limit=${limit}&rest=${this.options.rest}&lang=en`;
   }
 
   getArtworkUrl(id) {
@@ -62,50 +64,47 @@ class BookmarkDownloader extends WorkDownloader {
   }
 
   /**
-   *
+   * Parse JSON response from modern API
    * @param {string} content
    * @return {any[]|null}
    */
   getItems(content) {
-    let dom = parse(content);
-    return dom.querySelectorAll('.display_editable_works .image-item');
+    try {
+      const data = JSON.parse(content);
+      if (data && !data.error && data.body && data.body.works) {
+        return data.body.works;
+      }
+    } catch (error) {
+      debug.log('Error parsing bookmark response:', error);
+    }
+    return null;
   }
 
   /**
-   * Create general artwork downloader via content
+   * Create general artwork downloader via JSON response
    * @param {string} content
    * @returns {void}
    */
   createGeneralArtworkDownloaders(content) {
-    let provider,
-        $items = this.getItems(content);
+    let provider;
+    const works = this.getItems(content);
 
-    if ($items && $items.length > 0) {
-      $items.forEach($item => {
-        let $work = $item.querySelector('a.work');
+    if (works && works.length > 0) {
+      works.forEach(work => {
+        if (work && work.id) {
+          /**
+           * Get target downloader provider
+           */
+          provider = DownloadAdapter.getProvider(this.getArtworkUrl(work.id));
 
-        if ($work) {
-          let path = $work.getAttribute('href');
-
-          if (path) {
-            let matches = path.match(/(\d+)$/);
-
-            if (matches) {
-              /**
-               * Get target downloader provider
-               */
-              provider = DownloadAdapter.getProvider(this.getArtworkUrl(matches[1]));
-
-              /**
-               * Add downloader to download manager
-               */
-              this.downloadManager.addDownloader(provider.createDownloader({
-                url: this.getArtworkUrl(matches[1]),
-                saveTo: this.saveTo,
-                options: this.options
-              }));
-            }
-          }
+          /**
+           * Add downloader to download manager
+           */
+          this.downloadManager.addDownloader(provider.createDownloader({
+            url: this.getArtworkUrl(work.id),
+            saveTo: this.saveTo,
+            options: this.options
+          }));
         }
       });
     }
@@ -115,8 +114,8 @@ class BookmarkDownloader extends WorkDownloader {
    * Check if the downloader is valid
    */
   canDownload() {
-    let $items = this.getItems(this.responseBody);
-    return $items && $items.length > 0;
+    const works = this.getItems(this.responseBody);
+    return works && works.length > 0;
   }
 
   /**
