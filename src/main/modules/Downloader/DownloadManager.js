@@ -376,26 +376,22 @@ class DownloadManager extends EventEmitter {
    */
   canStartSpecificDownload(workDownloader) {
     const isMultiImage = this.isMultiImageDownload(workDownloader);
+    const counts = this.countActiveDownloads();
     
-    // Count downloads excluding the one we're trying to start
-    let multiImageDownloadingCount = 0;
-    let singleImageDownloadingCount = 0;
-
-    this.workDownloaderPool.forEach(wd => {
-      if ((wd.isDownloading() || wd.isProcessing()) && wd.id !== workDownloader.id) {
-        if (this.isMultiImageDownload(wd)) {
-          multiImageDownloadingCount++;
-        } else {
-          singleImageDownloadingCount++;
-        }
+    // Adjust counts if the downloader is already in downloading/processing state
+    if (workDownloader.isDownloading() || workDownloader.isProcessing()) {
+      if (isMultiImage) {
+        counts.multiImage--;
+      } else {
+        counts.singleImage--;
       }
-    });
+    }
 
     // Check if starting this downloader would exceed limits
     if (isMultiImage) {
-      return multiImageDownloadingCount < this.maxMultiImageDownloading;
+      return counts.multiImage < this.maxMultiImageDownloading;
     } else {
-      return singleImageDownloadingCount < this.maxSingleImageDownloading;
+      return counts.singleImage < this.maxSingleImageDownloading;
     }
   }
 
