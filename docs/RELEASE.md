@@ -36,10 +36,12 @@ The project includes a GitHub Actions workflow that automatically builds and cre
 ### Release Artifacts
 
 After a successful build, the following files will be available in the GitHub release:
-- `Pixiv Omina Setup <version>-ia32.exe` - 32-bit installer
-- `Pixiv Omina Setup <version>-x64.exe` - 64-bit installer  
-- `Pixiv Omina-<version>-ia32-win.zip` - 32-bit portable
-- `Pixiv Omina-<version>-x64-win.zip` - 64-bit portable
+- `Pixiv Omina Setup <version>.exe` - 32-bit installer
+- `Pixiv Omina Setup <version>.exe` - 64-bit installer  
+- `Pixiv Omina-<version>-win.zip` - 32-bit portable
+- `Pixiv Omina-<version>-win.zip` - 64-bit portable
+
+Note: The exact naming convention may vary based on electron-builder configuration. Check the `dist/` directory after building to see the actual filenames.
 
 ## Manual Build (Local Development)
 
