@@ -296,5 +296,7 @@
 
   "_untitled": "无标题",
 
-  "_gif_convert_workers": "GIF转化进程数"
+  "_gif_convert_workers": "GIF转化进程数",
+
+  "_max_downloading": "最大并发下载数"
 }

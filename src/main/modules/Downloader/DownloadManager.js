@@ -5,6 +5,7 @@ import {
 } from '@/global';
 import fs from 'fs-extra';
 import { shell } from 'electron';
+import SettingStorage from '@/modules/SettingStorage';
 
 /**
  * @class
@@ -25,7 +26,17 @@ class DownloadManager extends EventEmitter {
      */
     this.attachedListenersDownloaders = new Map();
 
-    this.maxDownloading = 1;
+    this.settingStorage = SettingStorage.getDefault();
+    this.maxDownloading = this.settingStorage.getSetting('maxDownloading') || 1;
+
+    // Listen for settings changes
+    this.settingStorage.on('change', (settings) => {
+      if (settings.maxDownloading !== undefined) {
+        this.maxDownloading = settings.maxDownloading;
+        // Try to start next downloads if max limit increased
+        this.downloadNext();
+      }
+    });
   }
 
   static instance = null;
