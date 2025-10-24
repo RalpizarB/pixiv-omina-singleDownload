@@ -10,8 +10,8 @@
   },
   "scripts": {
     "postinstall": "install-app-deps",
-    "dev": "NODE_OPTIONS=--openssl-legacy-provider electron-webpack dev --dev",
-    "compile": "NODE_OPTIONS=--openssl-legacy-provider electron-webpack",
+    "dev": "cross-env NODE_OPTIONS=--openssl-legacy-provider electron-webpack dev --dev",
+    "compile": "cross-env NODE_OPTIONS=--openssl-legacy-provider electron-webpack",
     "dist": "yarn compile && electron-builder",
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
     "pack": "electron-builder --dir"
@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-class-properties": "^7.7.0",
+    "cross-env": "^10.1.0",
     "electron": "^13.6.9",
     "electron-builder": "^22.14.13",
     "electron-webpack": "^2.8.2",
