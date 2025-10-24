@@ -32,6 +32,14 @@ Pixiv Omina 是由 [Electron](https://electronjs.org/) 驱动。
 
 [前往下载页面](https://github.com/leoding86/pixiv-omina/releases)
 
+## 可用安装包
+
+- **Windows 安装程序 (NSIS)**: 传统安装程序，支持自定义安装目录
+  - 提供 32 位 (ia32) 和 64 位 (x64) 版本
+- **Windows 便携版 (ZIP)**: 无需安装，解压即用
+  - 提供 32 位 (ia32) 和 64 位 (x64) 版本
+  - 适合没有管理员权限或偏好便携应用的用户
+
 # Q & A ❓
 
 Q：我为什么不能使用它下载作品？

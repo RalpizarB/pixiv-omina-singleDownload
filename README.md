@@ -32,6 +32,14 @@ Test on Window 10(1903). In theory, it can run on Mac and Linux if you can compi
 
 [Go to releases page](https://github.com/leoding86/pixiv-omina/releases)
 
+## Available Packages
+
+- **Windows Installer (NSIS)**: Traditional installer with custom installation directory support
+  - 32-bit (ia32) and 64-bit (x64) versions available
+- **Windows Portable (ZIP)**: No installation required, just extract and run
+  - 32-bit (ia32) and 64-bit (x64) versions available
+  - Ideal for users without admin rights or who prefer portable apps
+
 # Q & A ❓
 
 Q: Why I can't use it?
