@@ -10,8 +10,8 @@
   },
   "scripts": {
     "postinstall": "install-app-deps",
-    "dev": "electron-webpack dev --dev",
-    "compile": "electron-webpack",
+    "dev": "NODE_OPTIONS=--openssl-legacy-provider electron-webpack dev --dev",
+    "compile": "NODE_OPTIONS=--openssl-legacy-provider electron-webpack",
     "dist": "yarn compile && electron-builder",
     "dist:dir": "yarn dist --dir -c.compression=store -c.mac.identity=null",
     "pack": "electron-builder --dir"
@@ -28,7 +28,7 @@
     "node-html-parser": "^2.0.0",
     "rimraf": "^3.0.2",
     "source-map-support": "^0.5.12",
-    "sqlite3": "^5.0.0",
+    "sqlite3": "^5.1.7",
     "uuid": "^8.3.2",
     "vue": "^2.6.10",
     "vue-i18n": "^8.15.3",
@@ -36,9 +36,9 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-class-properties": "^7.7.0",
-    "electron": "^6.1.5",
-    "electron-builder": "^21.0.11",
-    "electron-webpack": "^2.7.4",
+    "electron": "^13.6.9",
+    "electron-builder": "^22.14.13",
+    "electron-webpack": "^2.8.2",
     "electron-webpack-vue": "^2.3.0",
     "sass": "^1.80.0",
     "sass-loader": "^8.0.0",
