@@ -12,6 +12,7 @@
         - Vue.js, Copyright (c) vuejs
         - vue-i18n, Copyright (c) kazuya kawaguchi
         - vue-virtual-scroller, Copyright (c) Guillaume Chau
+        - better-sqlite3, Copyright (c) Joshua Wise
 -----------------------------------------------------------------------------
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -87,7 +88,6 @@ For more information, please refer to <https://unlicense.org>
                 BSD 3-Clause "New" or "Revised" License
         applies to:
         - node-md5, Copyright (c) Paul Vorbach
-        - node-sqlite3, Copyright (c) Mapbox
 -----------------------------------------------------------------------------
 
 Redistribution and use in source and binary forms, with or without
