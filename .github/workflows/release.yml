@@ -29,6 +29,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup Windows SDK
+        uses: fbactions/setup-winsdk@v1
+        with:
+          winsdk-build-version: 19041
+
       - name: Install dependencies
         run: |
           yarn install
