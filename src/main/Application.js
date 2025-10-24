@@ -154,7 +154,8 @@ class Application {
       minHeight: 400,
       webPreferences: {
         webSecurity: false,
-        nodeIntegration: true
+        nodeIntegration: true,
+        contextIsolation: false
       }
     });
 
