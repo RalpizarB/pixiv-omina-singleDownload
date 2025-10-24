@@ -2,6 +2,7 @@ class UrlMatcher {
   static matcherList = [
     'isPixivWork',
     'isPixivUser',
+    'isPixivBookmark',
     'isPixivComicEpisode',
     'isPixivComicWork'
   ]
@@ -41,6 +42,15 @@ class UrlMatcher {
     }
 
     return false;
+  }
+
+  /**
+   * Check if URL is a Pixiv bookmark URL
+   * @param {String} url - URLs like: https://www.pixiv.net/en/users/123456/bookmarks/artworks
+   * @returns {boolean}
+   */
+  static isPixivBookmark(url) {
+    return /^https?:\/\/www\.pixiv\.net\/(?:[a-z]+\/)?users\/\d+\/bookmarks\/artworks/.test(url);
   }
 
   static isPixivComicEpisode(url) {
