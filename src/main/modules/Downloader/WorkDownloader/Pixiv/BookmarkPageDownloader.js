@@ -74,41 +74,51 @@ class BookmarkDownloader extends WorkDownloader {
   /**
    * Create general artwork downloader via content
    * @param {string} content
-   * @returns {void}
+   * @returns {Promise<void>}
    */
   createGeneralArtworkDownloaders(content) {
     let provider,
         $items = this.getItems(content);
 
     if ($items && $items.length > 0) {
-      $items.forEach($item => {
-        let $work = $item.querySelector('a.work');
+      // Use promise chain to add downloaders with 2-second delay between items
+      return $items.reduce((promise, $item, index) => {
+        return promise.then(() => {
+          let $work = $item.querySelector('a.work');
 
-        if ($work) {
-          let path = $work.getAttribute('href');
+          if ($work) {
+            let path = $work.getAttribute('href');
 
-          if (path) {
-            let matches = path.match(/(\d+)$/);
+            if (path) {
+              let matches = path.match(/(\d+)$/);
 
-            if (matches) {
-              /**
-               * Get target downloader provider
-               */
-              provider = DownloadAdapter.getProvider(this.getArtworkUrl(matches[1]));
+              if (matches) {
+                /**
+                 * Get target downloader provider
+                 */
+                provider = DownloadAdapter.getProvider(this.getArtworkUrl(matches[1]));
 
-              /**
-               * Add downloader to download manager
-               */
-              this.downloadManager.addDownloader(provider.createDownloader({
-                url: this.getArtworkUrl(matches[1]),
-                saveTo: this.saveTo,
-                options: this.options
-              }));
+                /**
+                 * Add downloader to download manager
+                 */
+                this.downloadManager.addDownloader(provider.createDownloader({
+                  url: this.getArtworkUrl(matches[1]),
+                  saveTo: this.saveTo,
+                  options: this.options
+                }));
+              }
             }
           }
-        }
-      });
+
+          // Add 2-second delay between items (but not after the last one)
+          if (index < $items.length - 1) {
+            return new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        });
+      }, Promise.resolve());
     }
+
+    return Promise.resolve();
   }
 
   /**
@@ -172,13 +182,12 @@ class BookmarkDownloader extends WorkDownloader {
     this.setStart();
 
     if (this.responseBody) {
-      try {
-        this.createGeneralArtworkDownloaders(this.responseBody);
+      this.createGeneralArtworkDownloaders(this.responseBody).then(() => {
         this.setFinish();
         this.downloadManager.deleteDownload({ downloadId: this.id });
-      } catch(error) {
+      }).catch(error => {
         this.setError(error);
-      }
+      });
     } else {
       this.requestBookmarkContent().then(content => {
         return this.createGeneralArtworkDownloaders(content);

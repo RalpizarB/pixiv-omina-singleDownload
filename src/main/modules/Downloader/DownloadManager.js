@@ -253,7 +253,46 @@ class DownloadManager extends EventEmitter {
 
     this.emit('finish', downloader);
 
+    // Clean up completed downloads if count exceeds 100
+    this.cleanupCompletedDownloads();
+
     this.downloadNext();
+  }
+
+  /**
+   * Clean up completed downloads if total count exceeds 100
+   * Only removes downloads with state 'finish'
+   * 
+   * Note: JavaScript Map maintains insertion order (ES2015+), so iterating
+   * through the map gives us downloads in the order they were added.
+   */
+  cleanupCompletedDownloads() {
+    const totalDownloads = this.workDownloaderPool.size;
+    
+    if (totalDownloads > 100) {
+      const completedDownloads = [];
+      
+      // Find all completed downloads (Map iteration is in insertion order)
+      this.workDownloaderPool.forEach((downloader, id) => {
+        if (downloader.state === 'finish') {
+          completedDownloads.push({ id, downloader });
+        }
+      });
+      
+      // Calculate how many completed downloads to remove
+      const downloadsToRemove = totalDownloads - 100;
+      
+      if (completedDownloads.length > 0 && downloadsToRemove > 0) {
+        // Remove the oldest completed downloads (first in the list)
+        const toRemove = completedDownloads.slice(0, Math.min(downloadsToRemove, completedDownloads.length));
+        
+        toRemove.forEach(({ id, downloader }) => {
+          this.workDownloaderPool.delete(id);
+          this.deattachListenersFromDownloader(downloader);
+          this.emit('delete', id);
+        });
+      }
+    }
   }
 
   /**
