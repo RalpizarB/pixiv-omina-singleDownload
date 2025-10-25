@@ -99,26 +99,28 @@ class BookmarkDownloader extends WorkDownloader {
       // Use promise chain to add downloaders with 2-second delay between items
       return works.reduce((promise, work, index) => {
         return promise.then(() => {
-          if (work && work.id) {
-            /**
-             * Get target downloader provider
-             */
-            provider = DownloadAdapter.getProvider(this.getArtworkUrl(work.id));
+          // Add delay before adding each item (except the first one)
+          const delayPromise = index > 0 
+            ? new Promise(resolve => setTimeout(resolve, BOOKMARK_DOWNLOAD_DELAY_MS))
+            : Promise.resolve();
+          
+          return delayPromise.then(() => {
+            if (work && work.id) {
+              /**
+               * Get target downloader provider
+               */
+              provider = DownloadAdapter.getProvider(this.getArtworkUrl(work.id));
 
-            /**
-             * Add downloader to download manager
-             */
-            this.downloadManager.addDownloader(provider.createDownloader({
-              url: this.getArtworkUrl(work.id),
-              saveTo: this.saveTo,
-              options: this.options
-            }));
-          }
-
-          // Add 2-second delay between items (but not after the last one)
-          if (index < works.length - 1) {
-            return new Promise(resolve => setTimeout(resolve, BOOKMARK_DOWNLOAD_DELAY_MS));
-          }
+              /**
+               * Add downloader to download manager
+               */
+              this.downloadManager.addDownloader(provider.createDownloader({
+                url: this.getArtworkUrl(work.id),
+                saveTo: this.saveTo,
+                options: this.options
+              }));
+            }
+          });
         });
       }, Promise.resolve());
     }
