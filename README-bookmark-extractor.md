@@ -72,15 +72,23 @@ npx electron bookmark-url-extractor.js --help
 
 ## How It Works
 
-This script reads authentication cookies from your Pixiv Omina application's Electron session storage. Specifically:
+This script uses a two-tier approach to get your authentication cookies:
 
-1. It accesses Electron's `persist:main` partition (where Pixiv Omina stores session data)
-2. Retrieves cookies for `pixiv.net` domain
-3. Uses those cookies to make authenticated API requests to Pixiv
-4. Extracts artwork IDs from bookmark pages
-5. Outputs the full URLs
+### Tier 1: Electron Session (Automatic)
+- First tries to read authentication cookies from your Pixiv Omina application's Electron session storage
+- Accesses Electron's `persist:main` partition (where Pixiv Omina stores session data)
+- Retrieves cookies for `pixiv.net` domain
+- No manual intervention needed if you're logged in to Pixiv Omina
 
-**No separate login required** - it uses your existing Pixiv Omina session!
+### Tier 2: Cookie File (Manual Fallback)
+- If Electron session cookies aren't found, falls back to reading from a `cookie` file
+- You create this file manually with cookies from your browser
+- Useful if:
+  - Electron session is not accessible
+  - You want to use different credentials
+  - You're running on a system without Pixiv Omina installed
+
+**No separate login required** in either case - it uses existing authentication!
 
 ## Output Formats
 
@@ -126,6 +134,59 @@ https://www.pixiv.net/artworks/345678
 ...
 ```
 
+## Cookie File (Manual Authentication)
+
+If you can't use the Electron session (e.g., Pixiv Omina not installed, different credentials needed), you can provide cookies manually via a `cookie` file.
+
+### Setup
+
+1. **Create the cookie file:**
+   ```bash
+   touch cookie
+   ```
+   Or create an empty file named `cookie` in the project root.
+
+2. **Get your Pixiv cookies:**
+   - Log in to https://www.pixiv.net in your browser
+   - Press F12 to open Developer Tools
+   - Go to Application/Storage → Cookies → https://www.pixiv.net
+   - Find the `PHPSESSID` cookie (this is the most important one)
+   - Copy all cookies in this format: `name=value; name=value; ...`
+
+3. **Add cookies to the file:**
+   
+   Open the `cookie` file and paste your cookies. Format examples:
+   
+   **Single line (recommended):**
+   ```
+   PHPSESSID=your_session_id_here; privacy_policy_agreement=1; other_cookie=value
+   ```
+   
+   **Multi-line (also works):**
+   ```
+   PHPSESSID=your_session_id_here
+   privacy_policy_agreement=1
+   other_cookie=value
+   ```
+
+4. **Run the script:**
+   The script will automatically detect and use the cookie file if Electron session cookies aren't available.
+
+### Cookie File Format
+
+See `cookie.example` for detailed format documentation. The script supports:
+- Single line with semicolon-separated cookies
+- Multi-line with one cookie per line
+- Comments (lines starting with `#`)
+- Blank lines (ignored)
+
+### Security Notes
+
+- The `cookie` file is automatically added to `.gitignore` to prevent accidental commits
+- Keep this file secure - it contains your authentication data
+- Cookies expire after some time - you may need to update them periodically
+- Never share this file or commit it to version control
+
 ## Integration with pixivOpener.html
 
 Perfect workflow for batch downloads:
@@ -148,10 +209,24 @@ Perfect workflow for batch downloads:
 **Cause:** The script can't find your login session cookies.
 
 **Solutions:**
+
+**Option 1: Use Pixiv Omina session (Recommended)**
 1. Make sure you've logged in to Pixiv Omina at least once
 2. Launch Pixiv Omina and log in again
 3. Check that you're running the script from the correct directory (should be in the same folder as `package.json`)
 4. Try closing Pixiv Omina and running the script again
+
+**Option 2: Use cookie file (Alternative)**
+1. Create a file named `cookie` in the project root directory
+2. Get your Pixiv cookies from your browser:
+   - Log in to https://www.pixiv.net
+   - Press F12 to open Developer Tools
+   - Go to Application/Storage → Cookies → https://www.pixiv.net
+   - Copy all cookies in format: `PHPSESSID=value; cookie2=value; cookie3=value`
+3. Paste the cookies into the `cookie` file
+4. Run the script again
+
+See `cookie.example` for detailed format instructions.
 
 ### "Cannot find module 'electron'" error
 

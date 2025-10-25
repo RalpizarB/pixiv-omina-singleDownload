@@ -45,10 +45,20 @@ npx electron bookmark-url-extractor.js --help
 
 ### Error: "No Pixiv cookies found"
 
-**Solution:**
+**Solution Option 1 (Automatic):**
 1. Open Pixiv Omina app
 2. Make sure you're logged in
 3. Close the app and try again
+
+**Solution Option 2 (Manual - Use Cookie File):**
+1. Create a file named `cookie` in project root
+2. Log in to pixiv.net in your browser
+3. Press F12 → Application → Cookies → pixiv.net
+4. Copy cookies in format: `PHPSESSID=value; cookie2=value`
+5. Paste into `cookie` file
+6. Run script again
+
+See `cookie.example` for detailed format.
 
 ### Error: "Cannot find module 'electron'"
 

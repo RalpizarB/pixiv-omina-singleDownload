@@ -17,6 +17,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const readline = require('readline');
 
 // Check if running in Electron context
 let app, session;
@@ -86,6 +87,110 @@ if (outputMode !== 'console' && outputMode !== 'file') {
 function extractUserId(url) {
   const match = url.match(/users\/(\d+)/);
   return match ? match[1] : null;
+}
+
+/**
+ * Read cookies from cookie file
+ */
+function readCookieFile() {
+  const cookieFilePath = path.join(__dirname, 'cookie');
+  
+  try {
+    if (!fs.existsSync(cookieFilePath)) {
+      return null;
+    }
+    
+    const content = fs.readFileSync(cookieFilePath, 'utf8').trim();
+    
+    if (!content) {
+      return null;
+    }
+    
+    // Parse cookie file - supports both single line and multi-line formats
+    let cookieString = '';
+    const lines = content.split('\n');
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine && !trimmedLine.startsWith('#')) {
+        // If line contains '=', it's a cookie
+        if (trimmedLine.includes('=')) {
+          cookieString += trimmedLine;
+          // Add semicolon if not already there
+          if (!trimmedLine.endsWith(';')) {
+            cookieString += '; ';
+          }
+        }
+      }
+    }
+    
+    return cookieString.trim() || null;
+  } catch (error) {
+    console.error('Error reading cookie file:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Prompt user to create cookie file
+ */
+async function promptForCookieFile() {
+  const cookieFilePath = path.join(__dirname, 'cookie');
+  const exampleFilePath = path.join(__dirname, 'cookie.example');
+  
+  console.error('\n' + '='.repeat(70));
+  console.error('NO COOKIES FOUND - Manual Cookie Setup Required');
+  console.error('='.repeat(70));
+  console.error('\nCould not find cookies in Electron session or cookie file.');
+  console.error('\nTo continue, please provide your Pixiv cookies manually:');
+  console.error('\n1. Create a file named "cookie" in this directory:');
+  console.error(`   ${path.dirname(cookieFilePath)}`);
+  console.error('\n2. Add your Pixiv cookies in this format:');
+  console.error('   PHPSESSID=your_session_id; cookie2=value2; cookie3=value3');
+  console.error('\n3. See cookie.example for detailed format instructions');
+  console.error('\nHow to get your cookies:');
+  console.error('   a) Log in to https://www.pixiv.net in your browser');
+  console.error('   b) Press F12 to open Developer Tools');
+  console.error('   c) Go to Application/Storage → Cookies → https://www.pixiv.net');
+  console.error('   d) Copy all cookies in format: name=value; name=value; ...');
+  console.error('\nPress Enter after creating the cookie file to try again, or Ctrl+C to exit...');
+  
+  // Create example file if it doesn't exist
+  if (!fs.existsSync(exampleFilePath)) {
+    try {
+      const exampleContent = `# Pixiv Cookie File Example
+# 
+# Format: cookie_name=cookie_value; another_cookie=another_value
+#
+# You can use single line:
+# PHPSESSID=12345_abcdef; privacy_policy_agreement=1
+#
+# Or multiple lines (one cookie per line):
+# PHPSESSID=12345_abcdef
+# privacy_policy_agreement=1
+#
+# Required: At minimum, you need the PHPSESSID cookie
+#
+# Add your cookies below (remove these comment lines):
+
+`;
+      fs.writeFileSync(exampleFilePath, exampleContent);
+    } catch (e) {
+      // Ignore if we can't create example file
+    }
+  }
+  
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stderr
+    });
+    
+    rl.question('', () => {
+      rl.close();
+      resolve();
+    });
+  });
 }
 
 /**
@@ -263,22 +368,61 @@ async function main() {
   }
   
   console.error(`Extracting bookmarks for user ID: ${userId}`);
-  console.error('Using cookies from your Pixiv Omina session...');
   
-  try {
-    // Get cookies from Electron session
-    const cookieString = await getCookiesFromSession();
-    
-    if (!cookieString) {
-      console.error('\nError: Could not retrieve session cookies.');
-      console.error('Please make sure:');
-      console.error('1. Pixiv Omina is installed');
-      console.error('2. You have logged in to Pixiv at least once');
-      console.error('3. Your session is still active');
-      app.quit();
-      process.exit(1);
+  let cookieString = '';
+  let retryCount = 0;
+  const maxRetries = 2;
+  
+  while (!cookieString && retryCount < maxRetries) {
+    if (retryCount === 0) {
+      // First attempt: Try Electron session
+      console.error('Attempting to use cookies from your Pixiv Omina session...');
+      cookieString = await getCookiesFromSession();
     }
     
+    if (!cookieString) {
+      // Second attempt: Try cookie file
+      console.error('\nAttempting to read cookies from cookie file...');
+      cookieString = readCookieFile();
+      
+      if (cookieString) {
+        console.error('✓ Successfully loaded cookies from cookie file');
+      }
+    }
+    
+    if (!cookieString) {
+      // If still no cookies, prompt user to create cookie file
+      await promptForCookieFile();
+      
+      // Try reading cookie file again after user creates it
+      cookieString = readCookieFile();
+      
+      if (cookieString) {
+        console.error('✓ Successfully loaded cookies from cookie file');
+      } else {
+        retryCount++;
+        if (retryCount < maxRetries) {
+          console.error('\nCookie file still not found or empty. Please try again.');
+        }
+      }
+    } else {
+      // Got cookies, break out of loop
+      break;
+    }
+  }
+  
+  if (!cookieString) {
+    console.error('\n' + '='.repeat(70));
+    console.error('ERROR: Could not retrieve cookies after multiple attempts');
+    console.error('='.repeat(70));
+    console.error('\nPlease either:');
+    console.error('1. Log in to Pixiv Omina and try again, OR');
+    console.error('2. Create a "cookie" file with your Pixiv cookies (see cookie.example)');
+    app.quit();
+    process.exit(1);
+  }
+  
+  try {
     const artworkUrls = await extractArtworkUrls(userId, cookieString);
     
     if (artworkUrls.length === 0) {
