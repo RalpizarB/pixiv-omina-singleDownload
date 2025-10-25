@@ -96,14 +96,34 @@ async function getCookiesFromSession() {
     // Initialize Electron app
     await app.whenReady();
     
+    console.error('Electron app initialized');
+    console.error(`User data path: ${app.getPath('userData')}`);
+    
     // Try to get session from the 'main' partition (used by Pixiv Omina)
     const ses = session.fromPartition('persist:main');
+    
+    console.error('Attempting to read cookies from persist:main partition...');
     
     // Get cookies for pixiv.net
     const cookies = await ses.cookies.get({ domain: '.pixiv.net' });
     
     if (cookies.length === 0) {
-      console.error('Warning: No Pixiv cookies found. Make sure you are logged in to Pixiv Omina.');
+      console.error('\nWarning: No Pixiv cookies found.');
+      console.error('Trying alternative cookie domain...');
+      
+      // Try without the leading dot
+      const cookies2 = await ses.cookies.get({ domain: 'pixiv.net' });
+      if (cookies2.length > 0) {
+        cookies.push(...cookies2);
+      }
+    }
+    
+    if (cookies.length === 0) {
+      console.error('\nError: No Pixiv cookies found in any location.');
+      console.error('Make sure:');
+      console.error('1. You have logged in to Pixiv Omina');
+      console.error('2. Pixiv Omina is using the default user data directory');
+      console.error('3. You are running this script with the correct Electron version');
       return '';
     }
     
@@ -118,7 +138,9 @@ async function getCookiesFromSession() {
     return cookieString.trim();
   } catch (error) {
     console.error('Error getting cookies from session:', error.message);
-    console.error('Make sure Pixiv Omina is installed and you have logged in at least once.');
+    console.error('\nDebug info:');
+    console.error('- Error details:', error);
+    console.error('- Make sure Pixiv Omina is installed and you have logged in at least once.');
     return '';
   }
 }

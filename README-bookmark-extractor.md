@@ -2,61 +2,67 @@
 
 A command-line script that extracts all artwork URLs from a Pixiv user's bookmarks using your existing Pixiv Omina login session.
 
-## Key Features
+## Setup Instructions
 
-- ✅ **Uses your existing Pixiv Omina session** - No need to log in separately
-- ✅ **Leverages stored cookies** - Reads from Electron's session storage
-- ✅ **Extracts all bookmarked artwork URLs** - Automatically handles pagination
-- ✅ **Output to console or file** - Flexible output options
-- ✅ **Simple command-line interface** - Easy to use
+### Step 1: Install Dependencies
 
-## How It Works
-
-This script reads the authentication cookies from your Pixiv Omina application (where you're already logged in) and uses them to fetch your bookmarks from Pixiv. This means:
-
-1. You don't need to provide credentials or log in again
-2. It respects your existing session and authentication
-3. It can access private bookmarks just like the main application
-
-## Requirements
-
-- Node.js (v12 or higher)
-- Pixiv Omina must be installed and you must have logged in at least once
-- Your Pixiv Omina session must be active (either the app is running or was recently used)
-
-## Installation
-
-The script uses Electron's built-in modules to access session data. Since Pixiv Omina is already an Electron app, you can run this script from within the application directory:
+First, make sure you're in the Pixiv Omina directory and have all dependencies installed:
 
 ```bash
-# Navigate to the Pixiv Omina directory
-cd /path/to/pixiv-omina
-
-# Run the extractor
-node bookmark-url-extractor.js "YOUR_BOOKMARK_URL"
+cd /path/to/pixiv-omina-singleDownload
+yarn install
 ```
+
+Or if you prefer npm:
+
+```bash
+cd /path/to/pixiv-omina-singleDownload
+npm install
+```
+
+### Step 2: Make Sure You're Logged In
+
+1. Launch Pixiv Omina application
+2. Log in to your Pixiv account if you haven't already
+3. You can close the app after logging in - the cookies will be saved
+
+### Step 3: Place the Script
+
+The script `bookmark-url-extractor.js` should be in the root directory of the Pixiv Omina project (same directory as `package.json`).
 
 ## Usage
 
-### Basic Usage (Output to Console)
+### Run with npx (Recommended)
+
+From the Pixiv Omina project directory:
 
 ```bash
+# Extract to console
 npx electron bookmark-url-extractor.js "https://www.pixiv.net/en/users/12345/bookmarks/artworks"
-```
 
-Or if you're in the Pixiv Omina directory with yarn installed:
-
-```bash
-yarn electron bookmark-url-extractor.js "https://www.pixiv.net/en/users/12345/bookmarks/artworks"
-```
-
-### Save to File
-
-```bash
+# Save to file
 npx electron bookmark-url-extractor.js "https://www.pixiv.net/en/users/12345/bookmarks/artworks" --output=file
 ```
 
-The file will be saved as `pixiv-bookmarks-{userId}-{timestamp}.txt` in the current directory.
+### Run with yarn
+
+If you have yarn installed:
+
+```bash
+# Extract to console
+yarn electron bookmark-url-extractor.js "https://www.pixiv.net/en/users/12345/bookmarks/artworks"
+
+# Save to file
+yarn electron bookmark-url-extractor.js "https://www.pixiv.net/en/users/12345/bookmarks/artworks" --output=file
+```
+
+### Run with electron directly
+
+If electron is installed globally or in node_modules:
+
+```bash
+./node_modules/.bin/electron bookmark-url-extractor.js "YOUR_BOOKMARK_URL"
+```
 
 ### Get Help
 
@@ -64,11 +70,48 @@ The file will be saved as `pixiv-bookmarks-{userId}-{timestamp}.txt` in the curr
 npx electron bookmark-url-extractor.js --help
 ```
 
+## How It Works
+
+This script reads authentication cookies from your Pixiv Omina application's Electron session storage. Specifically:
+
+1. It accesses Electron's `persist:main` partition (where Pixiv Omina stores session data)
+2. Retrieves cookies for `pixiv.net` domain
+3. Uses those cookies to make authenticated API requests to Pixiv
+4. Extracts artwork IDs from bookmark pages
+5. Outputs the full URLs
+
+**No separate login required** - it uses your existing Pixiv Omina session!
+
+## Output Formats
+
+### Console Output (default)
+
+Artwork URLs are printed to stdout (standard output), making it easy to pipe to other commands:
+
+```bash
+npx electron bookmark-url-extractor.js "YOUR_URL" > urls.txt
+```
+
+Progress messages are sent to stderr, so they won't interfere with the URL output.
+
+### File Output
+
+Using `--output=file` will create a timestamped file:
+
+```bash
+npx electron bookmark-url-extractor.js "YOUR_URL" --output=file
+# Creates: pixiv-bookmarks-{userId}-{timestamp}.txt
+```
+
 ## Example Output
 
 ```
 Extracting bookmarks for user ID: 12345
 Using cookies from your Pixiv Omina session...
+Electron app initialized
+User data path: /Users/username/Library/Application Support/pixiv-omina
+Attempting to read cookies from persist:main partition...
+Found 15 Pixiv cookies in session
 Fetching bookmarks using your Pixiv Omina session...
 Fetched 48 artworks (total: 48)
 Fetched 48 artworks (total: 96)
@@ -87,7 +130,7 @@ https://www.pixiv.net/artworks/345678
 
 Perfect workflow for batch downloads:
 
-1. Extract URLs using this script with your existing session:
+1. Extract URLs using this script:
    ```bash
    npx electron bookmark-url-extractor.js "YOUR_BOOKMARK_URL" --output=file
    ```
@@ -102,44 +145,89 @@ Perfect workflow for batch downloads:
 
 ### "No Pixiv cookies found" error
 
-This means the script couldn't find your login session. Try:
+**Cause:** The script can't find your login session cookies.
 
+**Solutions:**
 1. Make sure you've logged in to Pixiv Omina at least once
-2. Try logging out and back in to refresh your session
-3. Make sure Pixiv Omina is running or was recently used
+2. Launch Pixiv Omina and log in again
+3. Check that you're running the script from the correct directory (should be in the same folder as `package.json`)
+4. Try closing Pixiv Omina and running the script again
 
-### "Not logged in" error
+### "Cannot find module 'electron'" error
 
-Your session may have expired. Solution:
+**Cause:** Electron is not installed or you're not running the script correctly.
 
+**Solutions:**
+1. Run `yarn install` or `npm install` in the project directory
+2. Use `npx electron` or `yarn electron` instead of `node`
+3. Make sure you're in the project directory when running the command
+
+### "Not logged in" error from Pixiv API
+
+**Cause:** Your session cookies are expired or invalid.
+
+**Solutions:**
 1. Open Pixiv Omina
-2. Log in to Pixiv
+2. Log out and log back in to Pixiv
 3. Try running the script again
 
-### Permission errors
+### Script runs but outputs nothing
 
-The script needs to read Electron's session data. Make sure:
+**Cause:** The user ID might be incorrect or the bookmarks might be private.
 
-1. You're running the script from the Pixiv Omina directory
-2. You have read permissions for the application data directory
+**Solutions:**
+1. Verify the bookmark URL is correct
+2. Make sure it's your own bookmark URL (public bookmarks of others might not be accessible)
+3. Check that you have bookmarks in that collection
+
+## Advanced Usage
+
+### Pipe to file with console output
+
+```bash
+npx electron bookmark-url-extractor.js "YOUR_URL" > urls.txt 2> progress.log
+```
+
+This saves:
+- URLs to `urls.txt`
+- Progress messages to `progress.log`
+
+### Process URLs with other commands
+
+```bash
+# Count bookmarks
+npx electron bookmark-url-extractor.js "YOUR_URL" | wc -l
+
+# Filter specific patterns
+npx electron bookmark-url-extractor.js "YOUR_URL" | grep "123456"
+```
 
 ## Technical Details
 
-The script uses:
+**Session Data Location:**
+- Windows: `%APPDATA%\pixiv-omina\`
+- macOS: `~/Library/Application Support/pixiv-omina/`
+- Linux: `~/.config/pixiv-omina/`
 
-- **Electron's session API** to read cookies from the 'persist:main' partition
-- **Pixiv's public API** to fetch bookmark data
-- **Your existing authentication** via stored cookies
+**Partition:** The script reads from Electron's `persist:main` partition, which is where Pixiv Omina stores its session data.
 
-This approach is more reliable than creating a separate authentication system because it leverages the authentication that's already working in your Pixiv Omina application.
+**Authentication:** Uses the same cookie-based authentication as the main Pixiv Omina application - completely secure and no credentials are exposed.
+
+## Requirements
+
+- Node.js (v12 or higher)
+- Electron (installed via yarn/npm)
+- Pixiv Omina must be installed with at least one successful login
 
 ## Security Note
 
-This script only reads cookies from your local Electron session storage. It doesn't:
-- Store your credentials anywhere
-- Send data to any third parties
-- Modify your session or cookies
-- Require you to enter your password
+This script only reads cookies from your local Electron session storage. It:
+- ✅ Does NOT store credentials anywhere
+- ✅ Does NOT send data to third parties
+- ✅ Does NOT modify your session or cookies
+- ✅ Does NOT require you to enter your password
+
+It simply reads the same cookies that Pixiv Omina uses and makes API requests on your behalf.
 
 ## License
 
