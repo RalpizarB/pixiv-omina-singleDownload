@@ -5,67 +5,275 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Document</title>
+    <title>Pixiv Omina - Batch Downloader</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0099ff 0%, #0066cc 100%);
+            border-radius: 15px 15px 0 0;
+            padding: 2rem !important;
+            margin: -2rem -2rem 2rem -2rem;
+        }
+
+        .progress {
+            height: 30px !important;
+            border-radius: 15px;
+            background-color: #e9ecef;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #pixivlinks {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            transition: border-color 0.3s;
+            min-height: 200px;
+        }
+
+        #pixivlinks:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #6c757d;
+            transform: none;
+        }
+
+        .stats {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            display: inline-block;
+            margin-right: 2rem;
+        }
+
+        .stat-label {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        footer {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1rem !important;
+            margin-top: 2rem;
+        }
+    </style>
 </head>
 
 <body>
-    <header class="bg-primary text-white text-center py-3">
-        <h1>Welcome to My Website</h1>
-    </header>
+    <div class="container">
+        <div class="main-card">
+            <header class="text-white text-center">
+                <h1>🎨 Pixiv Omina Batch Downloader</h1>
+                <p class="mb-0">Add your Pixiv artwork URLs below (one per line)</p>
+            </header>
 
-    <main class="container my-5">
-        <p>This is a simple HTML5 boilerplate with Bootstrap.</p>
-    </main>
-    <textarea id="pixivlinks" class="form-control" rows="5" placeholder="Enter text here"></textarea>
-    <button class="btn btn-primary mt-3" onclick="openLinks()">Open Links</button>
+            <main>
+                <div class="mb-3">
+                    <label for="pixivlinks" class="form-label fw-bold">Artwork URLs:</label>
+                    <textarea id="pixivlinks" class="form-control" rows="10"
+                        placeholder="https://www.pixiv.net/artworks/123456&#10;https://www.pixiv.net/artworks/789012&#10;..."></textarea>
+                </div>
 
-    <div class="progress mt-3" style="height: 20px;">
-        <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0"
-            aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="d-grid gap-2">
+                    <button id="openButton" class="btn btn-primary btn-lg" onclick="openLinks()">
+                        📥 Start Downloading
+                    </button>
+                </div>
+
+                <div class="stats mt-3">
+                    <div class="stat-item">
+                        <span class="stat-label">Total:</span>
+                        <span id="total-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Processed:</span>
+                        <span id="processed-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Remaining:</span>
+                        <span id="remaining-count">0</span>
+                    </div>
+                </div>
+
+                <div class="progress mt-3">
+                    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0"
+                        aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+
+                <div id="status-message" class="alert mt-3" style="display: none;"></div>
+            </main>
+
+            <footer class="text-white text-center mt-4">
+                <p class="mb-0">
+                    💜 Made with love by Patasoftware | 
+                    <small>Downloads are added with a 2-second delay to prevent overwhelming the application</small>
+                </p>
+            </footer>
+        </div>
     </div>
 
     <script>
+        let isProcessing = false;
+
         async function openLinks() {
+            if (isProcessing) {
+                return;
+            }
+
             const textArea = document.getElementById('pixivlinks');
             const progressBar = document.getElementById('progress-bar');
-            const links = textArea.value.split('\n');
-            for (const link of links) {
+            const openButton = document.getElementById('openButton');
+            const statusMessage = document.getElementById('status-message');
+            const totalCountElement = document.getElementById('total-count');
+            const processedCountElement = document.getElementById('processed-count');
+            const remainingCountElement = document.getElementById('remaining-count');
+
+            // Get non-empty links
+            const links = textArea.value
+                .split('\n')
+                .map(link => link.trim())
+                .filter(link => link.length > 0);
+
+            if (links.length === 0) {
+                showStatus('Please enter at least one URL', 'warning');
+                return;
+            }
+
+            // Initialize
+            isProcessing = true;
+            openButton.disabled = true;
+            openButton.textContent = '⏳ Processing...';
+            totalCountElement.textContent = links.length;
+            processedCountElement.textContent = '0';
+            remainingCountElement.textContent = links.length;
+            progressBar.style.width = '0%';
+            progressBar.setAttribute('aria-valuenow', 0);
+            progressBar.textContent = '0%';
+            statusMessage.style.display = 'none';
+
+            showStatus('Starting download process...', 'info');
+
+            let processed = 0;
+
+            for (let i = 0; i < links.length; i++) {
+                const link = links[i];
                 let modifiedLink = encodeURI(link);
-                //adds pixiv-omina://create-download?url= before the link
-                modifiedLink = 'pixiv-omina://create-download?url=' + modifiedLink;
-                if (modifiedLink.trim()) {
-                    let progress = 0;
-                    const interval = setInterval(() => {
-                        progress += 2; // Increment progress every 100ms
-                        progressBar.style.width = `${progress}%`;
-                        progressBar.setAttribute('aria-valuenow', progress);
-                        if (progress >= 100) {
-                            clearInterval(interval);
-                        }
-                    }, 100);
-                    try {
-                        win= window.open(modifiedLink.trim(), '_blank');
-                        //close window after 1 second
+                
+                // Add pixiv-omina protocol
+                if (!modifiedLink.startsWith('pixiv-omina://')) {
+                    modifiedLink = 'pixiv-omina://create-download?url=' + modifiedLink;
+                }
+
+                try {
+                    // Open the link in a new window
+                    const win = window.open(modifiedLink, '_blank');
+                    
+                    // Close window after 1 second
+                    if (win) {
                         setTimeout(() => {
-                            win.close();
+                            try {
+                                win.close();
+                            } catch (e) {
+                                // Ignore errors when closing
+                            }
                         }, 1000);
-                        if (!response.ok) {
-                            console.error(`Failed to fetch: ${modifiedLink.trim()}`);
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds
-                    } catch (error) {
-                        console.error(`Error fetching link: ${modifiedLink.trim()}`, error);
                     }
+
+                    processed++;
+                    
+                    // Update progress
+                    const progress = Math.round((processed / links.length) * 100);
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.setAttribute('aria-valuenow', progress);
+                    progressBar.textContent = `${progress}%`;
+                    
+                    // Update stats
+                    processedCountElement.textContent = processed;
+                    remainingCountElement.textContent = links.length - processed;
+                    
+                    showStatus(`Processing ${processed} of ${links.length}...`, 'info');
+
+                    // Wait 2 seconds before processing next link (except for the last one)
+                    if (i < links.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                } catch (error) {
+                    console.error(`Error opening link: ${modifiedLink}`, error);
+                    showStatus(`Error processing link ${i + 1}`, 'danger');
                 }
             }
-        }
-    </script>
 
-    <footer class="bg-dark text-white text-center py-3">
-        <p>&copy; Patasoftware</p>
-    </footer>
+            // Completed
+            showStatus(`✅ Successfully processed ${processed} of ${links.length} links!`, 'success');
+            openButton.disabled = false;
+            openButton.textContent = '📥 Start Downloading';
+            isProcessing = false;
+        }
+
+        function showStatus(message, type) {
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.className = `alert alert-${type}`;
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+        }
+
+        // Update counts when textarea changes
+        document.getElementById('pixivlinks').addEventListener('input', function() {
+            const links = this.value
+                .split('\n')
+                .map(link => link.trim())
+                .filter(link => link.length > 0);
+            
+            document.getElementById('total-count').textContent = links.length;
+            document.getElementById('remaining-count').textContent = links.length;
+            document.getElementById('processed-count').textContent = '0';
+        });
+    </script>
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
