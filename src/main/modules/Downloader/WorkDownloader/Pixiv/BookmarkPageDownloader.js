@@ -96,16 +96,23 @@ class BookmarkDownloader extends WorkDownloader {
     const works = this.getItems(content);
 
     if (works && works.length > 0) {
+      debug.log(`[BookmarkPageDownloader] Starting to add ${works.length} downloaders with ${BOOKMARK_DOWNLOAD_DELAY_MS}ms delay`);
+      
       // Use promise chain to add downloaders with 2-second delay between items
       return works.reduce((promise, work, index) => {
         return promise.then(() => {
           // Add delay before adding each item (except the first one)
           const delayPromise = index > 0 
-            ? new Promise(resolve => setTimeout(resolve, BOOKMARK_DOWNLOAD_DELAY_MS))
+            ? new Promise(resolve => {
+                debug.log(`[BookmarkPageDownloader] Waiting ${BOOKMARK_DOWNLOAD_DELAY_MS}ms before adding item ${index + 1}/${works.length}`);
+                setTimeout(resolve, BOOKMARK_DOWNLOAD_DELAY_MS);
+              })
             : Promise.resolve();
           
           return delayPromise.then(() => {
             if (work && work.id) {
+              debug.log(`[BookmarkPageDownloader] Adding downloader ${index + 1}/${works.length} for artwork ${work.id}`);
+              
               /**
                * Get target downloader provider
                */
