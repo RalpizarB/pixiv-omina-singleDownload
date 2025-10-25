@@ -83,31 +83,41 @@ class BookmarkDownloader extends WorkDownloader {
   /**
    * Create general artwork downloader via JSON response
    * @param {string} content
-   * @returns {void}
+   * @returns {Promise<void>}
    */
   createGeneralArtworkDownloaders(content) {
     let provider;
     const works = this.getItems(content);
 
     if (works && works.length > 0) {
-      works.forEach(work => {
-        if (work && work.id) {
-          /**
-           * Get target downloader provider
-           */
-          provider = DownloadAdapter.getProvider(this.getArtworkUrl(work.id));
+      // Use promise chain to add downloaders with 2-second delay between items
+      return works.reduce((promise, work, index) => {
+        return promise.then(() => {
+          if (work && work.id) {
+            /**
+             * Get target downloader provider
+             */
+            provider = DownloadAdapter.getProvider(this.getArtworkUrl(work.id));
 
-          /**
-           * Add downloader to download manager
-           */
-          this.downloadManager.addDownloader(provider.createDownloader({
-            url: this.getArtworkUrl(work.id),
-            saveTo: this.saveTo,
-            options: this.options
-          }));
-        }
-      });
+            /**
+             * Add downloader to download manager
+             */
+            this.downloadManager.addDownloader(provider.createDownloader({
+              url: this.getArtworkUrl(work.id),
+              saveTo: this.saveTo,
+              options: this.options
+            }));
+          }
+
+          // Add 2-second delay between items (but not after the last one)
+          if (index < works.length - 1) {
+            return new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        });
+      }, Promise.resolve());
     }
+
+    return Promise.resolve();
   }
 
   /**
@@ -171,13 +181,12 @@ class BookmarkDownloader extends WorkDownloader {
     this.setStart();
 
     if (this.responseBody) {
-      try {
-        this.createGeneralArtworkDownloaders(this.responseBody);
+      this.createGeneralArtworkDownloaders(this.responseBody).then(() => {
         this.setFinish();
         this.downloadManager.deleteDownload({ downloadId: this.id });
-      } catch(error) {
+      }).catch(error => {
         this.setError(error);
-      }
+      });
     } else {
       this.requestBookmarkContent().then(content => {
         return this.createGeneralArtworkDownloaders(content);
