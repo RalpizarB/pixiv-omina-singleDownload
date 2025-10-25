@@ -4,6 +4,12 @@ import Request from '@/modules/Request';
 import BookmarkProvider from '../../Providers/Pixiv/BookmarkProvider';
 import DownloadAdapter from '../../DownloadAdapter';
 
+/**
+ * Delay in milliseconds between adding bookmark downloads
+ * to prevent overwhelming the application with too many simultaneous downloads
+ */
+const BOOKMARK_DOWNLOAD_DELAY_MS = 2000;
+
 class BookmarkDownloader extends WorkDownloader {
   constructor() {
     super();
@@ -111,7 +117,7 @@ class BookmarkDownloader extends WorkDownloader {
 
           // Add 2-second delay between items (but not after the last one)
           if (index < works.length - 1) {
-            return new Promise(resolve => setTimeout(resolve, 2000));
+            return new Promise(resolve => setTimeout(resolve, BOOKMARK_DOWNLOAD_DELAY_MS));
           }
         });
       }, Promise.resolve());
