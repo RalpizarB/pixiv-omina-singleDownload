@@ -262,6 +262,9 @@ class DownloadManager extends EventEmitter {
   /**
    * Clean up completed downloads if total count exceeds 100
    * Only removes downloads with state 'finish'
+   * 
+   * Note: JavaScript Map maintains insertion order (ES2015+), so iterating
+   * through the map gives us downloads in the order they were added.
    */
   cleanupCompletedDownloads() {
     const totalDownloads = this.workDownloaderPool.size;
@@ -269,7 +272,7 @@ class DownloadManager extends EventEmitter {
     if (totalDownloads > 100) {
       const completedDownloads = [];
       
-      // Find all completed downloads
+      // Find all completed downloads (Map iteration is in insertion order)
       this.workDownloaderPool.forEach((downloader, id) => {
         if (downloader.state === 'finish') {
           completedDownloads.push({ id, downloader });

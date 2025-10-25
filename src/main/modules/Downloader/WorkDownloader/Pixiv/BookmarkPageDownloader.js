@@ -81,7 +81,7 @@ class BookmarkDownloader extends WorkDownloader {
         $items = this.getItems(content);
 
     if ($items && $items.length > 0) {
-      // Use promise chain to add downloaders with 2-second delay
+      // Use promise chain to add downloaders with 2-second delay between items
       return $items.reduce((promise, $item, index) => {
         return promise.then(() => {
           let $work = $item.querySelector('a.work');
@@ -110,8 +110,10 @@ class BookmarkDownloader extends WorkDownloader {
             }
           }
 
-          // Add 2-second delay after each download addition
-          return new Promise(resolve => setTimeout(resolve, 2000));
+          // Add 2-second delay between items (but not after the last one)
+          if (index < $items.length - 1) {
+            return new Promise(resolve => setTimeout(resolve, 2000));
+          }
         });
       }, Promise.resolve());
     }
