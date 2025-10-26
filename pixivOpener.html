@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Pixiv Omina - Batch Downloader</title>
+    <title>Pixiv Omina - Batch Downloader Pro</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -78,6 +78,16 @@
             transform: none;
         }
 
+        .btn-secondary {
+            border-radius: 10px;
+            padding: 8px 20px;
+        }
+
+        .btn-danger {
+            border-radius: 10px;
+            padding: 8px 20px;
+        }
+
         .stats {
             background: #f8f9fa;
             border-radius: 10px;
@@ -88,11 +98,41 @@
         .stat-item {
             display: inline-block;
             margin-right: 2rem;
+            margin-bottom: 0.5rem;
         }
 
         .stat-label {
             font-weight: bold;
             color: #667eea;
+        }
+
+        .stat-value {
+            font-size: 1.1em;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+
+        .file-upload-area:hover {
+            background-color: #f0f0ff;
+        }
+
+        .file-upload-area.drag-over {
+            background-color: #e0e0ff;
+            border-color: #0066cc;
         }
 
         footer {
@@ -101,6 +141,15 @@
             padding: 1rem !important;
             margin-top: 2rem;
         }
+
+        .badge-skipped {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .badge-processed {
+            background-color: #28a745;
+        }
     </style>
 </head>
 
@@ -108,35 +157,74 @@
     <div class="container">
         <div class="main-card">
             <header class="text-white text-center">
-                <h1>🎨 Pixiv Omina Batch Downloader</h1>
-                <p class="mb-0">Add your Pixiv artwork URLs below (one per line)</p>
+                <h1>🎨 Pixiv Omina Batch Downloader Pro</h1>
+                <p class="mb-0">Advanced batch processing with duplicate detection</p>
             </header>
 
             <main>
+                <!-- Configuration Section -->
+                <div class="config-section">
+                    <h5 class="mb-3">⚙️ Configuration</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="throttleDelay" class="form-label">Throttle Delay (milliseconds):</label>
+                            <input type="number" id="throttleDelay" class="form-control" value="2000" min="0" max="60000" step="100">
+                            <small class="text-muted">Time to wait between processing each URL (0 = instant)</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Database Actions:</label>
+                            <div>
+                                <button class="btn btn-secondary btn-sm me-2" onclick="viewProcessedUrls()">
+                                    📋 View History (<span id="db-count">0</span>)
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="clearDatabase()">
+                                    🗑️ Clear History
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Upload Section -->
                 <div class="mb-3">
-                    <label for="pixivlinks" class="form-label fw-bold">Artwork URLs:</label>
+                    <label class="form-label fw-bold">📁 Upload Text File:</label>
+                    <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" accept=".txt" style="display: none;" onchange="handleFileUpload(event)">
+                        <p class="mb-2">📄 Click to upload or drag & drop a text file</p>
+                        <small class="text-muted">Supported format: One URL per line</small>
+                    </div>
+                </div>
+
+                <!-- Manual Input Section -->
+                <div class="mb-3">
+                    <label for="pixivlinks" class="form-label fw-bold">✏️ Or Enter URLs Manually:</label>
                     <textarea id="pixivlinks" class="form-control" rows="10"
                         placeholder="https://www.pixiv.net/artworks/123456&#10;https://www.pixiv.net/artworks/789012&#10;..."></textarea>
                 </div>
 
                 <div class="d-grid gap-2">
                     <button id="openButton" class="btn btn-primary btn-lg" onclick="openLinks()">
-                        📥 Start Downloading
+                        📥 Start Processing
                     </button>
                 </div>
 
+                <!-- Statistics Section -->
                 <div class="stats mt-3">
                     <div class="stat-item">
                         <span class="stat-label">Total:</span>
-                        <span id="total-count">0</span>
+                        <span id="total-count" class="stat-value">0</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">Processed:</span>
-                        <span id="processed-count">0</span>
+                        <span id="processed-count" class="stat-value badge bg-success">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Skipped (Duplicates):</span>
+                        <span id="skipped-count" class="stat-value badge badge-skipped">0</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-label">Remaining:</span>
-                        <span id="remaining-count">0</span>
+                        <span id="remaining-count" class="stat-value">0</span>
                     </div>
                 </div>
 
@@ -151,15 +239,123 @@
             <footer class="text-white text-center mt-4">
                 <p class="mb-0">
                     💜 Made with love by Patasoftware | 
-                    <small>Downloads are added with a 2-second delay to prevent overwhelming the application</small>
+                    <small>Features: Duplicate detection • Configurable throttling • File upload • Local database</small>
                 </p>
             </footer>
         </div>
     </div>
 
     <script>
+        // Local Database using localStorage
+        const DB_KEY = 'pixiv-omina-processed-urls';
         let isProcessing = false;
 
+        // Initialize database
+        function initDatabase() {
+            if (!localStorage.getItem(DB_KEY)) {
+                localStorage.setItem(DB_KEY, JSON.stringify({}));
+            }
+            updateDatabaseCount();
+        }
+
+        // Add URL to database
+        function addToDatabase(url) {
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+            db[url] = {
+                timestamp: new Date().toISOString(),
+                processed: true
+            };
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+            updateDatabaseCount();
+        }
+
+        // Check if URL is in database
+        function isInDatabase(url) {
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+            return db.hasOwnProperty(url);
+        }
+
+        // Update database count display
+        function updateDatabaseCount() {
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+            document.getElementById('db-count').textContent = Object.keys(db).length;
+        }
+
+        // View processed URLs
+        function viewProcessedUrls() {
+            const db = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+            const urls = Object.keys(db);
+            
+            if (urls.length === 0) {
+                alert('No URLs in database yet.');
+                return;
+            }
+
+            const message = `📊 Processed URLs Database\n\nTotal: ${urls.length}\n\n` +
+                urls.slice(0, 50).join('\n') +
+                (urls.length > 50 ? `\n\n... and ${urls.length - 50} more` : '');
+            
+            alert(message);
+        }
+
+        // Clear database
+        function clearDatabase() {
+            if (confirm('Are you sure you want to clear the entire history? This cannot be undone.')) {
+                localStorage.setItem(DB_KEY, JSON.stringify({}));
+                updateDatabaseCount();
+                showStatus('✅ Database cleared successfully', 'success');
+            }
+        }
+
+        // Handle file upload
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const textArea = document.getElementById('pixivlinks');
+                
+                // Append to existing content if any
+                if (textArea.value.trim()) {
+                    textArea.value += '\n' + content;
+                } else {
+                    textArea.value = content;
+                }
+                
+                // Trigger input event to update counts
+                textArea.dispatchEvent(new Event('input'));
+                
+                showStatus(`✅ File loaded: ${file.name}`, 'success');
+            };
+            reader.readAsText(file);
+        }
+
+        // Drag and drop support
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('drag-over');
+        });
+
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('drag-over');
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                handleFileUpload({ target: { files: files } });
+            }
+        });
+
+        // Main processing function
         async function openLinks() {
             if (isProcessing) {
                 return;
@@ -171,7 +367,9 @@
             const statusMessage = document.getElementById('status-message');
             const totalCountElement = document.getElementById('total-count');
             const processedCountElement = document.getElementById('processed-count');
+            const skippedCountElement = document.getElementById('skipped-count');
             const remainingCountElement = document.getElementById('remaining-count');
+            const throttleDelay = parseInt(document.getElementById('throttleDelay').value) || 0;
 
             // Get non-empty links
             const links = textArea.value
@@ -180,7 +378,28 @@
                 .filter(link => link.length > 0);
 
             if (links.length === 0) {
-                showStatus('Please enter at least one URL', 'warning');
+                showStatus('Please enter at least one URL or upload a file', 'warning');
+                return;
+            }
+
+            // Filter out duplicates from input and check database
+            const uniqueLinks = [...new Set(links)];
+            const newLinks = [];
+            const skippedLinks = [];
+
+            for (const link of uniqueLinks) {
+                if (isInDatabase(link)) {
+                    skippedLinks.push(link);
+                } else {
+                    newLinks.push(link);
+                }
+            }
+
+            const totalToProcess = newLinks.length;
+            const totalSkipped = skippedLinks.length;
+
+            if (totalToProcess === 0) {
+                showStatus(`⚠️ All ${uniqueLinks.length} URLs have already been processed. Nothing to do!`, 'warning');
                 return;
             }
 
@@ -188,20 +407,21 @@
             isProcessing = true;
             openButton.disabled = true;
             openButton.textContent = '⏳ Processing...';
-            totalCountElement.textContent = links.length;
+            totalCountElement.textContent = uniqueLinks.length;
             processedCountElement.textContent = '0';
-            remainingCountElement.textContent = links.length;
+            skippedCountElement.textContent = totalSkipped;
+            remainingCountElement.textContent = totalToProcess;
             progressBar.style.width = '0%';
             progressBar.setAttribute('aria-valuenow', 0);
             progressBar.textContent = '0%';
             statusMessage.style.display = 'none';
 
-            showStatus('Starting download process...', 'info');
+            showStatus(`Starting process... (${totalToProcess} new, ${totalSkipped} already processed)`, 'info');
 
             let processed = 0;
 
-            for (let i = 0; i < links.length; i++) {
-                const link = links[i];
+            for (let i = 0; i < newLinks.length; i++) {
+                const link = newLinks[i];
                 let modifiedLink = encodeURI(link);
                 
                 // Add pixiv-omina protocol
@@ -224,23 +444,25 @@
                         }, 1000);
                     }
 
+                    // Add to database after successful processing
+                    addToDatabase(link);
                     processed++;
                     
                     // Update progress
-                    const progress = Math.round((processed / links.length) * 100);
+                    const progress = Math.round((processed / totalToProcess) * 100);
                     progressBar.style.width = `${progress}%`;
                     progressBar.setAttribute('aria-valuenow', progress);
                     progressBar.textContent = `${progress}%`;
                     
                     // Update stats
                     processedCountElement.textContent = processed;
-                    remainingCountElement.textContent = links.length - processed;
+                    remainingCountElement.textContent = totalToProcess - processed;
                     
-                    showStatus(`Processing ${processed} of ${links.length}...`, 'info');
+                    showStatus(`Processing ${processed} of ${totalToProcess} (${totalSkipped} skipped)...`, 'info');
 
-                    // Wait 2 seconds before processing next link (except for the last one)
-                    if (i < links.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    // Wait according to throttle delay (except for the last one)
+                    if (i < newLinks.length - 1 && throttleDelay > 0) {
+                        await new Promise(resolve => setTimeout(resolve, throttleDelay));
                     }
                 } catch (error) {
                     console.error(`Error opening link: ${modifiedLink}`, error);
@@ -249,9 +471,10 @@
             }
 
             // Completed
-            showStatus(`✅ Successfully processed ${processed} of ${links.length} links!`, 'success');
+            const summary = `✅ Complete! Processed: ${processed} | Skipped: ${totalSkipped} | Total: ${uniqueLinks.length}`;
+            showStatus(summary, 'success');
             openButton.disabled = false;
-            openButton.textContent = '📥 Start Downloading';
+            openButton.textContent = '📥 Start Processing';
             isProcessing = false;
         }
 
@@ -269,9 +492,24 @@
                 .map(link => link.trim())
                 .filter(link => link.length > 0);
             
-            document.getElementById('total-count').textContent = links.length;
-            document.getElementById('remaining-count').textContent = links.length;
+            const uniqueLinks = [...new Set(links)];
+            let alreadyProcessed = 0;
+            
+            for (const link of uniqueLinks) {
+                if (isInDatabase(link)) {
+                    alreadyProcessed++;
+                }
+            }
+            
+            document.getElementById('total-count').textContent = uniqueLinks.length;
+            document.getElementById('remaining-count').textContent = uniqueLinks.length - alreadyProcessed;
+            document.getElementById('skipped-count').textContent = alreadyProcessed;
             document.getElementById('processed-count').textContent = '0';
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initDatabase();
         });
     </script>
 
