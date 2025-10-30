@@ -48,6 +48,10 @@
         let isPaused = false;
         let isProcessing = false;
         let pageSize = 10;
+        
+        // Configuration constants
+        const PROTOCOL_WINDOW_CLOSE_DELAY = 500; // Time to wait before closing protocol window
+        const LINK_PROCESSING_DELAY = 5000; // Delay between processing links
 
         function updateStatus(message) {
             document.getElementById('status').textContent = message;
@@ -125,19 +129,26 @@
                     updateProgress(currentIndex + 1, allLinks.length);
                     
                     try {
-                        // Create an invisible iframe to trigger the protocol without focusing
-                        const iframe = document.createElement('iframe');
-                        iframe.style.display = 'none';
-                        iframe.src = modifiedLink;
-                        document.body.appendChild(iframe);
+                        // Create a window to trigger the protocol
+                        // Use window.open() with immediate window.focus() to keep focus on current page
+                        const win = window.open(modifiedLink, '_blank');
                         
-                        // Remove iframe after a short delay
-                        setTimeout(() => {
-                            document.body.removeChild(iframe);
-                        }, 1000);
+                        // Immediately close the window after protocol handler is triggered
+                        if (win) {
+                            setTimeout(() => {
+                                try {
+                                    win.close();
+                                } catch (e) {
+                                    // Window may already be closed by the protocol handler
+                                }
+                            }, PROTOCOL_WINDOW_CLOSE_DELAY);
+                        }
+                        
+                        // Keep focus on current window to prevent tab switching
+                        window.focus();
                         
                         // Wait before processing next link
-                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        await new Promise(resolve => setTimeout(resolve, LINK_PROCESSING_DELAY));
                     } catch (error) {
                         console.error(`Error processing link: ${link}`, error);
                         updateStatus(`Error processing link ${currentIndex + 1}: ${error.message}`);
