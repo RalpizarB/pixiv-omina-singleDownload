@@ -4,11 +4,18 @@ import {
   PixivGeneralArtworkProvider,
   PixivNovelProvider,
   PixivNovelSeriesProvider,
-  PixivUserProvider
+  PixivUserProvider,
+  PixivBookmarkUrlProvider
 } from './Providers';
 
 class DownloadAdapter {
   static matchMaps = [
+    {
+      provider: PixivBookmarkUrlProvider,
+      patterns: [
+        /^https?:\/{2}www\.pixiv\.net\/(?:[a-z]+\/)?users\/(?<userId>\d+)\/bookmarks\/artworks(?:\?.*)?$/i
+      ]
+    },
     {
       provider: PixivUserProvider,
       patterns: [
