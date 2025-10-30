@@ -61,8 +61,10 @@ pixiv_downloader.exe -d "C:\My Downloads" urls.txt
 - **Build from source**: See [cpp-downloader/README.md](cpp-downloader/README.md) for instructions
 
 For detailed documentation, see:
+- [cpp-downloader/QUICKSTART.md](cpp-downloader/QUICKSTART.md) - Quick reference
 - [cpp-downloader/README.md](cpp-downloader/README.md) - Usage guide
 - [cpp-downloader/IMPLEMENTATION.md](cpp-downloader/IMPLEMENTATION.md) - Technical details
+- [COMPLETE_WORKFLOW.md](COMPLETE_WORKFLOW.md) - Complete workflow from extraction to download
 
 # Downloads⚓
 
