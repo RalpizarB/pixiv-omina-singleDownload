@@ -31,6 +31,41 @@ Test on Window 10(1903). In theory, it can run on Mac and Linux if you can compi
 * Close to tray (You need to enable this feature at setting page)
 * Support http/socks proxy (If you use socks proxy you need input proxy url with schemel)
 
+# C++ Console Downloader🖥️
+
+A command-line tool for downloading Pixiv artworks from a list of URLs. Perfect for batch downloads from bookmark exports!
+
+## Features
+
+- Download artworks one at a time from a file containing URLs
+- Automatic duplicate detection with SQLite database
+- Configurable download directory
+- Uses the same cookie file as bookmark-url-extractor.js
+- Skip already downloaded works (or force re-download with `-forceRepeated`)
+- Multi-page artwork support
+- Real-time download progress
+
+## Quick Start
+
+```bash
+# 1. Extract bookmark URLs using the Node.js script
+npx electron bookmark-url-extractor.js "YOUR_BOOKMARK_URL" --output=file
+
+# 2. Download artworks using the C++ console program
+pixiv_downloader.exe -d "C:\My Downloads" urls.txt
+```
+
+## Downloads
+
+- **Pre-built Windows executable**: Check the [GitHub Actions](https://github.com/RalpizarB/pixiv-omina-singleDownload/actions) page for the latest build
+- **Build from source**: See [cpp-downloader/README.md](cpp-downloader/README.md) for instructions
+
+For detailed documentation, see:
+- [cpp-downloader/QUICKSTART.md](cpp-downloader/QUICKSTART.md) - Quick reference
+- [cpp-downloader/README.md](cpp-downloader/README.md) - Usage guide
+- [cpp-downloader/IMPLEMENTATION.md](cpp-downloader/IMPLEMENTATION.md) - Technical details
+- [COMPLETE_WORKFLOW.md](COMPLETE_WORKFLOW.md) - Complete workflow from extraction to download
+
 # Downloads⚓
 
 [Go to releases page](https://github.com/leoding86/pixiv-omina/releases)

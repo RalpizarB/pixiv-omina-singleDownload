@@ -1,0 +1,81 @@
+name: Build C++ Downloader
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - 'copilot/**'
+    paths:
+      - 'cpp-downloader/**'
+      - '.github/workflows/build-cpp-downloader.yml'
+  pull_request:
+    paths:
+      - 'cpp-downloader/**'
+      - '.github/workflows/build-cpp-downloader.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 'c8696863d371ab7f46e213d8f5ca923c4aef2a00'
+
+      - name: Install dependencies via vcpkg
+        working-directory: cpp-downloader
+        run: |
+          $env:VCPKG_ROOT = "${{ github.workspace }}/vcpkg"
+          vcpkg install curl:x64-windows sqlite3:x64-windows nlohmann-json:x64-windows
+        shell: pwsh
+
+      - name: Configure CMake
+        working-directory: cpp-downloader
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_BUILD_TYPE=Release -A x64
+        shell: pwsh
+
+      - name: Build
+        working-directory: cpp-downloader/build
+        run: |
+          cmake --build . --config Release
+        shell: pwsh
+
+      - name: Package executable
+        working-directory: cpp-downloader
+        run: |
+          mkdir release
+          Copy-Item build/bin/Release/pixiv_downloader.exe release/
+          Copy-Item README.md release/
+          Copy-Item ../cookie.example release/
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixiv-downloader-windows-x64
+          path: cpp-downloader/release/
+          retention-days: 30
+
+      - name: Create Release (if tagged)
+        if: startsWith(github.ref, 'refs/tags/cpp-v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            cpp-downloader/release/pixiv_downloader.exe
+            cpp-downloader/README.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
