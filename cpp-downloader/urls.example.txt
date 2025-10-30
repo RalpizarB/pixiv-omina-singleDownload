@@ -1,0 +1,11 @@
+# Example URLs file for pixiv_downloader
+# Lines starting with # are comments and will be ignored
+# Add one Pixiv artwork URL per line
+
+# Example URLs (these are just examples, replace with real artwork URLs):
+# https://www.pixiv.net/artworks/123456
+# https://www.pixiv.net/artworks/789012
+# https://www.pixiv.net/artworks/345678
+
+# You can generate this file using bookmark-url-extractor.js:
+# npx electron bookmark-url-extractor.js "YOUR_BOOKMARK_URL" --output=file
