@@ -1,9 +1,14 @@
-import { parse } from 'node-html-parser';
 import { debug } from '@/global';
 import WorkDownloader from '@/modules/Downloader/WorkDownloader';
 import Request from '@/modules/Request';
 import BookmarkProvider from '../../Providers/Pixiv/BookmarkProvider';
 import DownloadAdapter from '../../DownloadAdapter';
+
+/**
+ * Delay in milliseconds between adding bookmark downloads
+ * to prevent overwhelming the application with too many simultaneous downloads
+ */
+const BOOKMARK_DOWNLOAD_DELAY_MS = 2000;
 
 class BookmarkDownloader extends WorkDownloader {
   constructor() {
@@ -50,11 +55,14 @@ class BookmarkDownloader extends WorkDownloader {
   }
 
   /**
-   * Get bookmark url
+   * Get bookmark url using modern Pixiv API
    * @returns {string}
    */
   getBookmarkUrl() {
-    return `https://www.pixiv.net/bookmark.php?rest=${this.options.rest}&type=illust_all` + (this.options.page > 1 ? `&p=${this.options.page}` : '');
+    // Calculate offset based on page number (48 items per page)
+    const limit = 48;
+    const offset = (this.options.page - 1) * limit;
+    return `https://www.pixiv.net/ajax/user/self/illusts/bookmarks?tag=&offset=${offset}&limit=${limit}&rest=${this.options.rest}&lang=en`;
   }
 
   getArtworkUrl(id) {
@@ -62,61 +70,77 @@ class BookmarkDownloader extends WorkDownloader {
   }
 
   /**
-   *
+   * Parse JSON response from modern API
    * @param {string} content
    * @return {any[]|null}
    */
   getItems(content) {
-    let dom = parse(content);
-    return dom.querySelectorAll('.display_editable_works .image-item');
+    try {
+      const data = JSON.parse(content);
+      if (data && !data.error && data.body && data.body.works) {
+        return data.body.works;
+      }
+    } catch (error) {
+      debug.log('Error parsing bookmark response:', error);
+    }
+    return null;
   }
 
   /**
-   * Create general artwork downloader via content
+   * Create general artwork downloader via JSON response
    * @param {string} content
-   * @returns {void}
+   * @returns {Promise<void>}
    */
   createGeneralArtworkDownloaders(content) {
-    let provider,
-        $items = this.getItems(content);
+    let provider;
+    const works = this.getItems(content);
 
-    if ($items && $items.length > 0) {
-      $items.forEach($item => {
-        let $work = $item.querySelector('a.work');
-
-        if ($work) {
-          let path = $work.getAttribute('href');
-
-          if (path) {
-            let matches = path.match(/(\d+)$/);
-
-            if (matches) {
+    if (works && works.length > 0) {
+      debug.log(`[BookmarkPageDownloader] Starting to add ${works.length} downloaders with ${BOOKMARK_DOWNLOAD_DELAY_MS}ms delay`);
+      
+      // Use promise chain to add downloaders with 2-second delay between items
+      return works.reduce((promise, work, index) => {
+        return promise.then(() => {
+          // Add delay before adding each item (except the first one)
+          const delayPromise = index > 0 
+            ? new Promise(resolve => {
+                debug.log(`[BookmarkPageDownloader] Waiting ${BOOKMARK_DOWNLOAD_DELAY_MS}ms before adding item ${index + 1}/${works.length}`);
+                setTimeout(resolve, BOOKMARK_DOWNLOAD_DELAY_MS);
+              })
+            : Promise.resolve();
+          
+          return delayPromise.then(() => {
+            if (work && work.id) {
+              debug.log(`[BookmarkPageDownloader] Adding downloader ${index + 1}/${works.length} for artwork ${work.id}`);
+              
               /**
                * Get target downloader provider
                */
-              provider = DownloadAdapter.getProvider(this.getArtworkUrl(matches[1]));
+              provider = DownloadAdapter.getProvider(this.getArtworkUrl(work.id));
 
               /**
                * Add downloader to download manager
                */
               this.downloadManager.addDownloader(provider.createDownloader({
-                url: this.getArtworkUrl(matches[1]),
+                url: this.getArtworkUrl(work.id),
                 saveTo: this.saveTo,
                 options: this.options
               }));
             }
-          }
-        }
-      });
+          });
+        });
+      }, Promise.resolve());
     }
+
+    return Promise.resolve();
   }
 
   /**
    * Check if the downloader is valid
    */
   canDownload() {
-    let $items = this.getItems(this.responseBody);
-    return $items && $items.length > 0;
+    const works = this.getItems(this.responseBody);
+    return works && works.length > 0;
   }
 
   /**
@@ -172,13 +196,12 @@ class BookmarkDownloader extends WorkDownloader {
     this.setStart();
 
     if (this.responseBody) {
-      try {
-        this.createGeneralArtworkDownloaders(this.responseBody);
+      this.createGeneralArtworkDownloaders(this.responseBody).then(() => {
         this.setFinish();
         this.downloadManager.deleteDownload({ downloadId: this.id });
-      } catch(error) {
+      }).catch(error => {
         this.setError(error);
-      }
+      });
     } else {
       this.requestBookmarkContent().then(content => {
         return this.createGeneralArtworkDownloaders(content);
