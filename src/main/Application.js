@@ -297,7 +297,8 @@ class Application {
         this.mainWindow.restore();
       }
 
-      this.mainWindow.focus();
+      // Don't focus window to allow background downloads
+      // this.mainWindow.focus();
     }
   }
 
