@@ -24,6 +24,7 @@ private:
     std::string cookies_;
     
     static size_t write_callback(void* contents, size_t size, size_t nmemb, void* userp);
+    static size_t file_write_callback(void* ptr, size_t size, size_t nmemb, void* stream);
     static size_t header_callback(char* buffer, size_t size, size_t nitems, void* userdata);
     static int progress_callback(void* clientp, curl_off_t dltotal, curl_off_t dlnow,
                                 curl_off_t ultotal, curl_off_t ulnow);

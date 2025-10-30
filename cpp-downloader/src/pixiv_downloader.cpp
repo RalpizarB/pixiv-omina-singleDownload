@@ -177,6 +177,8 @@ bool PixivDownloader::download_artwork(const std::string& artwork_id) {
     
     // Download each image
     bool all_success = true;
+    int successful_downloads = 0;
+    
     for (size_t i = 0; i < image_urls.size(); ++i) {
         const auto& img_url = image_urls[i];
         
@@ -192,23 +194,54 @@ bool PixivDownloader::download_artwork(const std::string& artwork_id) {
         std::cout << "Downloading image " << (i + 1) << "/" << image_urls.size() 
                   << ": " << filename << std::endl;
         
-        if (!http_client_->download_file(img_url, output_path)) {
-            std::cerr << "Failed to download image " << (i + 1) << std::endl;
+        try {
+            if (!http_client_->download_file(img_url, output_path)) {
+                std::cerr << "Failed to download image " << (i + 1) << ", continuing..." << std::endl;
+                all_success = false;
+            } else {
+                std::cout << "Saved: " << output_path << std::endl;
+                successful_downloads++;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Exception during download: " << e.what() << ", continuing..." << std::endl;
             all_success = false;
-        } else {
-            std::cout << "Saved: " << output_path << std::endl;
         }
     }
     
-    // Mark as downloaded in database
-    if (all_success) {
-        std::string first_file = args_.download_dir + "/" + 
-                                sanitize_filename(image_urls[0].substr(image_urls[0].find_last_of('/') + 1));
-        db_->mark_downloaded(artwork_id, first_file);
-        std::cout << "✓ Artwork " << artwork_id << " downloaded successfully" << std::endl;
+    // Mark as downloaded in database if at least one image was successfully downloaded
+    if (successful_downloads > 0) {
+        // Find the first successfully downloaded file
+        std::string first_file = "";
+        for (size_t i = 0; i < image_urls.size(); ++i) {
+            size_t last_slash = image_urls[i].find_last_of('/');
+            std::string filename = (last_slash != std::string::npos) 
+                                  ? image_urls[i].substr(last_slash + 1) 
+                                  : artwork_id + "_" + std::to_string(i) + ".jpg";
+            std::string output_path = args_.download_dir + "/" + sanitize_filename(filename);
+            
+            // Check if file exists
+            std::ifstream test_file(output_path);
+            if (test_file.good()) {
+                first_file = output_path;
+                break;
+            }
+        }
+        
+        if (!first_file.empty()) {
+            db_->mark_downloaded(artwork_id, first_file);
+            if (all_success) {
+                std::cout << "✓ Artwork " << artwork_id << " downloaded successfully (all " 
+                          << successful_downloads << " image(s))" << std::endl;
+            } else {
+                std::cout << "⚠ Artwork " << artwork_id << " partially downloaded (" 
+                          << successful_downloads << " of " << image_urls.size() << " image(s))" << std::endl;
+            }
+        }
+    } else {
+        std::cerr << "✗ Failed to download any images for artwork " << artwork_id << std::endl;
     }
     
-    return all_success;
+    return successful_downloads > 0;
 }
 
 int PixivDownloader::run() {

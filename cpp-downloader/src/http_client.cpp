@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <cstdio>  // for std::remove
 
 HttpClient::HttpClient() : curl_handle_(nullptr) {
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -61,6 +62,13 @@ size_t HttpClient::write_callback(void* contents, size_t size, size_t nmemb, voi
 
 size_t HttpClient::header_callback(char* buffer, size_t size, size_t nitems, void* userdata) {
     return size * nitems;
+}
+
+size_t HttpClient::file_write_callback(void* ptr, size_t size, size_t nmemb, void* stream) {
+    std::ofstream* out = static_cast<std::ofstream*>(stream);
+    size_t total = size * nmemb;
+    out->write(static_cast<char*>(ptr), total);
+    return out->good() ? total : 0;
 }
 
 int HttpClient::progress_callback(void* clientp, curl_off_t dltotal, curl_off_t dlnow,
@@ -126,13 +134,7 @@ bool HttpClient::download_file(const std::string& url, const std::string& output
 
     curl_easy_reset(curl_handle_);
     curl_easy_setopt(curl_handle_, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl_handle_, CURLOPT_WRITEFUNCTION, 
-        [](void* ptr, size_t size, size_t nmemb, void* stream) -> size_t {
-            std::ofstream* out = static_cast<std::ofstream*>(stream);
-            size_t total = size * nmemb;
-            out->write(static_cast<char*>(ptr), total);
-            return total;
-        });
+    curl_easy_setopt(curl_handle_, CURLOPT_WRITEFUNCTION, HttpClient::file_write_callback);
     curl_easy_setopt(curl_handle_, CURLOPT_WRITEDATA, &outfile);
     curl_easy_setopt(curl_handle_, CURLOPT_COOKIE, cookies_.c_str());
     curl_easy_setopt(curl_handle_, CURLOPT_USERAGENT,
@@ -147,10 +149,15 @@ bool HttpClient::download_file(const std::string& url, const std::string& output
     curl_easy_setopt(curl_handle_, CURLOPT_NOPROGRESS, 0L);
 
     CURLcode res = curl_easy_perform(curl_handle_);
+    
+    // Ensure file is flushed and closed before checking result
+    outfile.flush();
     outfile.close();
 
     if (res != CURLE_OK) {
         std::cerr << "\ncurl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+        // Delete corrupted file
+        std::remove(output_path.c_str());
         return false;
     }
 
@@ -159,6 +166,8 @@ bool HttpClient::download_file(const std::string& url, const std::string& output
     
     if (http_code != 200) {
         std::cerr << "\nHTTP error: " << http_code << std::endl;
+        // Delete corrupted file
+        std::remove(output_path.c_str());
         return false;
     }
 
