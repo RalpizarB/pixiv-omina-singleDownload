@@ -4,12 +4,6 @@ import Request from '@/modules/Request';
 import BookmarkProvider from '../../Providers/Pixiv/BookmarkProvider';
 import DownloadAdapter from '../../DownloadAdapter';
 
-/**
- * Delay in milliseconds between adding bookmark downloads
- * to prevent overwhelming the application with too many simultaneous downloads
- */
-const BOOKMARK_DOWNLOAD_DELAY_MS = 2000;
-
 class BookmarkDownloader extends WorkDownloader {
   constructor() {
     super();
@@ -89,50 +83,31 @@ class BookmarkDownloader extends WorkDownloader {
   /**
    * Create general artwork downloader via JSON response
    * @param {string} content
-   * @returns {Promise<void>}
+   * @returns {void}
    */
   createGeneralArtworkDownloaders(content) {
     let provider;
     const works = this.getItems(content);
 
     if (works && works.length > 0) {
-      debug.log(`[BookmarkPageDownloader] Starting to add ${works.length} downloaders with ${BOOKMARK_DOWNLOAD_DELAY_MS}ms delay`);
-      
-      // Use promise chain to add downloaders with 2-second delay between items
-      return works.reduce((promise, work, index) => {
-        return promise.then(() => {
-          // Add delay before adding each item (except the first one)
-          const delayPromise = index > 0 
-            ? new Promise(resolve => {
-                debug.log(`[BookmarkPageDownloader] Waiting ${BOOKMARK_DOWNLOAD_DELAY_MS}ms before adding item ${index + 1}/${works.length}`);
-                setTimeout(resolve, BOOKMARK_DOWNLOAD_DELAY_MS);
-              })
-            : Promise.resolve();
-          
-          return delayPromise.then(() => {
-            if (work && work.id) {
-              debug.log(`[BookmarkPageDownloader] Adding downloader ${index + 1}/${works.length} for artwork ${work.id}`);
-              
-              /**
-               * Get target downloader provider
-               */
-              provider = DownloadAdapter.getProvider(this.getArtworkUrl(work.id));
+      works.forEach(work => {
+        if (work && work.id) {
+          /**
+           * Get target downloader provider
+           */
+          provider = DownloadAdapter.getProvider(this.getArtworkUrl(work.id));
 
-              /**
-               * Add downloader to download manager
-               */
-              this.downloadManager.addDownloader(provider.createDownloader({
-                url: this.getArtworkUrl(work.id),
-                saveTo: this.saveTo,
-                options: this.options
-              }));
-            }
-          });
-        });
-      }, Promise.resolve());
+          /**
+           * Add downloader to download manager
+           */
+          this.downloadManager.addDownloader(provider.createDownloader({
+            url: this.getArtworkUrl(work.id),
+            saveTo: this.saveTo,
+            options: this.options
+          }));
+        }
+      });
     }
-
-    return Promise.resolve();
   }
 
   /**
@@ -196,12 +171,13 @@ class BookmarkDownloader extends WorkDownloader {
     this.setStart();
 
     if (this.responseBody) {
-      this.createGeneralArtworkDownloaders(this.responseBody).then(() => {
+      try {
+        this.createGeneralArtworkDownloaders(this.responseBody);
         this.setFinish();
         this.downloadManager.deleteDownload({ downloadId: this.id });
-      }).catch(error => {
+      } catch(error) {
         this.setError(error);
-      });
+      }
     } else {
       this.requestBookmarkContent().then(content => {
         return this.createGeneralArtworkDownloaders(content);
