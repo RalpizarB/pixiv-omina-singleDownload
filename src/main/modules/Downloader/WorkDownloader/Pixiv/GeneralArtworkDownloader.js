@@ -192,6 +192,8 @@ class GeneralArtworkDownloader extends WorkDownloader {
         downloadManager.transformWorkDownloader(downloader);
 
         resolve();
+      }).catch(error => {
+        reject(error);
       });
     });
   }
