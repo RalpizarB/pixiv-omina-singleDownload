@@ -3,7 +3,7 @@
 ## Installation
 
 ### Option 1: Download Pre-built (Recommended)
-1. Go to [GitHub Actions](../../actions)
+1. Go to [GitHub Actions](https://github.com/RalpizarB/pixiv-omina-singleDownload/actions)
 2. Click the latest successful "Build C++ Downloader" workflow run
 3. Download `pixiv-downloader-windows-x64` artifact
 4. Extract `pixiv_downloader.exe`
@@ -105,10 +105,10 @@ SELECT COUNT(*) FROM downloaded_artworks;
 
 | Issue | Solution |
 |-------|----------|
-| "Cannot open cookie file" | Create `cookie` file with Pixiv cookies |
-| "HTTP 403" | Update cookies (they expired) |
-| "Invalid URL" | Ensure URLs are `https://www.pixiv.net/artworks/{id}` |
-| Already downloaded | Use `-forceRepeated` to override |
+| Cannot open cookie file | Create `cookie` file with Pixiv cookies |
+| HTTP 403 error | Update cookies (they expired) |
+| Invalid URL error | Ensure URLs are `https://www.pixiv.net/artworks/{id}` |
+| Already downloaded message | Use `-forceRepeated` to override |
 
 ## Links
 
