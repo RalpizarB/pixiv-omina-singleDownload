@@ -25,6 +25,25 @@ class DownloadManager extends EventEmitter {
      */
     this.attachedListenersDownloaders = new Map();
 
+    /**
+     * Maximum number of multi-image downloads (manga/comic) that can run simultaneously
+     * @property
+     * @type {number}
+     */
+    this.maxMultiImageDownloading = 1;
+
+    /**
+     * Maximum number of single-image downloads that can run simultaneously
+     * @property
+     * @type {number}
+     */
+    this.maxSingleImageDownloading = 3;
+
+    /**
+     * @deprecated Use maxMultiImageDownloading and maxSingleImageDownloading instead
+     * @property
+     * @type {number}
+     */
     this.maxDownloading = 1;
   }
 
@@ -162,16 +181,63 @@ class DownloadManager extends EventEmitter {
     }
   }
 
-  reachMaxDownloading() {
-    let downloadingCount = 0;
+  /**
+   * Check if a downloader has multiple images (manga/comic)
+   * @param {WorkDownloader} workDownloader
+   * @returns {boolean}
+   */
+  isMultiImageDownload(workDownloader) {
+    // Check if the downloader has an images array with more than 1 image
+    if (workDownloader.images && Array.isArray(workDownloader.images)) {
+      return workDownloader.images.length > 1;
+    }
+    
+    // Check context for pageCount (available for manga/illustration before images are loaded)
+    if (workDownloader.context && workDownloader.context.pageCount) {
+      return workDownloader.context.pageCount > 1;
+    }
+    
+    // Fallback: check if it's already started and has a total property
+    if (typeof workDownloader.toJSON === 'function') {
+      const data = workDownloader.toJSON();
+      if (data.total !== undefined && data.total > 1) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Count currently downloading/processing downloads by type
+   * @returns {{multiImage: number, singleImage: number}}
+   */
+  countActiveDownloads() {
+    let multiImageDownloadingCount = 0;
+    let singleImageDownloadingCount = 0;
 
     this.workDownloaderPool.forEach(workDownloader => {
       if (workDownloader.isDownloading() || workDownloader.isProcessing()) {
-        downloadingCount++;
+        if (this.isMultiImageDownload(workDownloader)) {
+          multiImageDownloadingCount++;
+        } else {
+          singleImageDownloadingCount++;
+        }
       }
     });
 
-    return downloadingCount >= this.maxDownloading;
+    return {
+      multiImage: multiImageDownloadingCount,
+      singleImage: singleImageDownloadingCount
+    };
+  }
+
+  reachMaxDownloading() {
+    const counts = this.countActiveDownloads();
+    
+    // Return true if either limit is reached
+    return counts.multiImage >= this.maxMultiImageDownloading ||
+           counts.singleImage >= this.maxSingleImageDownloading;
   }
 
   /**
@@ -304,6 +370,32 @@ class DownloadManager extends EventEmitter {
   }
 
   /**
+   * Check if we can start a specific downloader based on current download limits
+   * @param {WorkDownloader} workDownloader
+   * @returns {boolean}
+   */
+  canStartSpecificDownload(workDownloader) {
+    const isMultiImage = this.isMultiImageDownload(workDownloader);
+    const counts = this.countActiveDownloads();
+    
+    // Adjust counts if the downloader is already in downloading/processing state
+    if (workDownloader.isDownloading() || workDownloader.isProcessing()) {
+      if (isMultiImage) {
+        counts.multiImage--;
+      } else {
+        counts.singleImage--;
+      }
+    }
+
+    // Check if starting this downloader would exceed limits
+    if (isMultiImage) {
+      return counts.multiImage < this.maxMultiImageDownloading;
+    } else {
+      return counts.singleImage < this.maxSingleImageDownloading;
+    }
+  }
+
+  /**
    * @param {Object} param
    * @param {number|string} param.downloadId
    * @param {boolean} param.reset
@@ -317,7 +409,7 @@ class DownloadManager extends EventEmitter {
         workDownloader.reset();
       }
 
-      if (!this.reachMaxDownloading()) {
+      if (this.canStartSpecificDownload(workDownloader)) {
         workDownloader.start();
       } else {
         workDownloader.setPending();
