@@ -21,6 +21,13 @@
     >
       <el-input v-model="scopedSettings.gifConvertWorkers"></el-input>
     </el-form-item>
+
+    <el-form-item
+      :label="$t('_max_downloading')"
+      prop="maxDownloading"
+    >
+      <el-input v-model="scopedSettings.maxDownloading"></el-input>
+    </el-form-item>
   </el-form>
 </template>
 
@@ -41,6 +48,7 @@ export default {
         convertUgoiraToGif: true,
         autostartDownload: true,
         gifConvertWorkers: 3,
+        maxDownloading: 1,
         saveTo: ''
       }
     };
@@ -54,14 +62,20 @@ export default {
     });
   },
 
+  methods: {
+    validatePositiveInteger(value) {
+      return /^[1-9]\d*$/.test(value) ? value : 1;
+    }
+  },
+
   watch: {
     settings(value) {
       const updatedSettings = {}
 
       Object.keys(this.scopedSettings).forEach(key => {
         if (value[key] !== undefined) {
-          if (key === 'gifConvertWorkers' && !/^[1-9]\d*$/.test(value[key])) {
-            value[key] = 1;
+          if (key === 'gifConvertWorkers' || key === 'maxDownloading') {
+            value[key] = this.validatePositiveInteger(value[key]);
           }
 
           updatedSettings[key] = value[key];

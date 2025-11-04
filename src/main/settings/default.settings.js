@@ -56,7 +56,9 @@ function defaultSetting() {
 
     singleUserMode: false,
 
-    gifConvertWorkers: 3
+    gifConvertWorkers: 3,
+
+    maxDownloading: 1
   }
 }
 

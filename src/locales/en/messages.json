@@ -296,5 +296,7 @@
 
   "_untitled": "Untitled",
 
-  "_gif_convert_workers": "GIF Convert Workers"
+  "_gif_convert_workers": "GIF Convert Workers",
+
+  "_max_downloading": "Max Concurrent Downloads"
 }
