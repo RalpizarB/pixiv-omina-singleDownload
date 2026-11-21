@@ -101,3 +101,11 @@ yarn dist
 # `yarn compile` & create unpacked build with electron-builder
 yarn dist:dir
 ```
+
+
+---
+
+## Estado (inventario 2026-11-20)
+
+Rama `respaldo-limpieza-2026-11-20`: respaldo creado antes de limpiar la carpeta local `Documents\GitHub`. Incluye los cambios locales que no tenían commit y este README. La rama principal no se modificó.
+Este repo es un fork de leoding86/pixiv-omina, orientado a descargas individuales. Las variantes de las ramas `copilot/*` también existen como copias en `Music\` (inventario local).
